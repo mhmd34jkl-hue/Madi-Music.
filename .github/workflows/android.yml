@@ -44,8 +44,6 @@ jobs:
           printf '%s\n' \
             '601085b94cd77f0b54ff86406957099ebe79c4d6' \
             > "$ANDROID_HOME/licenses/android-sdk-preview-license"
-          SDKMANAGER="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
-          "$SDKMANAGER" --licenses
 
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v4
@@ -84,11 +82,11 @@ jobs:
           gh release download "$TAG" --repo "$GH_REPO" --dir audio-packs
           ls -lah audio-packs
 
-      - name: Put all 16 MP3 files into app assets
+      - name: Extract and number all 16 songs
+        shell: bash
         run: |
           set -euo pipefail
-          MUSIC="$PROJECT_DIR/app/src/main/assets/music"
-          mkdir -p "$MUSIC" extracted
+          mkdir -p extracted
           for f in audio-packs/*; do
             case "$f" in
               *.zip) unzip -oq "$f" -d extracted ;;
@@ -96,12 +94,28 @@ jobs:
               *) echo "Unsupported audio asset: $f"; exit 1 ;;
             esac
           done
-          find extracted -type f -iname '*.mp3' -exec cp -f {} "$MUSIC/" \;
-          for n in $(seq 1 16); do
-            name=$(printf "%03d" "$n")
-            test -s "$MUSIC/$name.mp3" || { echo "Missing music/$name.mp3"; exit 1; }
+
+          mapfile -d '' -t TRACKS < <(
+            find extracted -type f -iname '*.mp3' -print0 | sort -zV
+          )
+
+          echo "Found ${#TRACKS[@]} MP3 files"
+          if [ "${#TRACKS[@]}" -ne 16 ]; then
+            echo "Expected 16 MP3 files but found ${#TRACKS[@]}"
+            find extracted -type f -iname '*.mp3' -print | sort -V
+            exit 1
+          fi
+
+          MUSIC="$PROJECT_DIR/app/src/main/assets/music"
+          mkdir -p "$MUSIC"
+
+          for i in "${!TRACKS[@]}"; do
+            number=$(printf "%03d" "$((i + 1))")
+            cp -f "${TRACKS[$i]}" "$MUSIC/$number.mp3"
+            echo "Prepared $number.mp3"
           done
-          echo "Verified 16 MP3 files"
+
+          echo "All 16 MP3 files are ready"
 
       - name: Build debug APK
         run: gradle -p "$PROJECT_DIR" assembleDebug

@@ -27,12 +27,10 @@ jobs:
         uses: android-actions/setup-android@v3
         with:
           packages: platform-tools
-          accept-android-sdk-licenses: false
 
       - name: Accept Android SDK licenses
         shell: bash
         run: |
-          set -euo pipefail
           mkdir -p "$ANDROID_HOME/licenses"
           printf '%s\n' \
             '24333f8a63b6825ea9c5514f83c2829b004d1fee' \
@@ -41,9 +39,6 @@ jobs:
             '84831b9409646a918e30573bab4c9c91346d8abd' \
             '504667f4c0de7af1a06de9f4b1727b84351b0e' \
             > "$ANDROID_HOME/licenses/android-sdk-license"
-          printf '%s\n' \
-            '601085b94cd77f0b54ff86406957099ebe79c4d6' \
-            > "$ANDROID_HOME/licenses/android-sdk-preview-license"
 
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v4
@@ -60,12 +55,54 @@ jobs:
         run: |
           set -euo pipefail
           ZIP=$(find . -maxdepth 1 -type f -name 'MadiMusic-Android-Source*.zip' | head -n 1)
-          test -n "$ZIP" || { echo 'Project ZIP not found in repository root'; exit 1; }
+          test -n "$ZIP" || { echo 'Project ZIP not found'; exit 1; }
           mkdir -p project
           unzip -q "$ZIP" -d project
           PROJECT=$(find project -type f -name settings.gradle.kts -printf '%h\n' | head -n 1)
-          test -n "$PROJECT" || { echo 'settings.gradle.kts not found'; exit 1; }
+          test -n "$PROJECT" || { echo 'Project not found'; exit 1; }
           echo "PROJECT_DIR=$PROJECT" >> "$GITHUB_ENV"
+
+      - name: Fix duplicate Track and use MusicCatalog
+        shell: bash
+        run: |
+          set -euo pipefail
+          FILE="$PROJECT_DIR/app/src/main/java/com/madi/music/MainActivity.kt"
+          python3 - "$FILE" <<'PY'
+          import re
+          import sys
+          from pathlib import Path
+
+          path = Path(sys.argv[1])
+          source = path.read_text()
+
+          source, count = re.subn(
+              r'private data class Track\(val title: String, val artist: String, val file: String\)\s*'
+              r'private val tracks = listOf\(.*?\)\s*',
+              '',
+              source,
+              count=1,
+              flags=re.S
+          )
+
+          if count != 1:
+              raise SystemExit("Could not safely find the duplicate Track list")
+
+          source = source.replace(
+              '    val current = tracks[selected]',
+              '    val tracks = MusicCatalog.tracks\n    val current = tracks[selected]'
+          )
+
+          source = source.replace(
+              '        val uri = Uri.parse("asset:///music/${tracks[index].file}")\n'
+              '        player?.setMediaItem(MediaItem.fromUri(uri)); player?.prepare(); player?.play()',
+              '        player?.setMediaItem(MusicCatalog.mediaItems()[index])\n'
+              '        player?.prepare()\n'
+              '        player?.play()'
+          )
+
+          path.write_text(source)
+          print("MainActivity.kt fixed successfully")
+          PY
 
       - name: Download audio packs from release
         env:
@@ -102,7 +139,6 @@ jobs:
           echo "Found ${#TRACKS[@]} MP3 files"
           if [ "${#TRACKS[@]}" -ne 16 ]; then
             echo "Expected 16 MP3 files but found ${#TRACKS[@]}"
-            find extracted -type f -iname '*.mp3' -print | sort -V
             exit 1
           fi
 
@@ -112,33 +148,10 @@ jobs:
           for i in "${!TRACKS[@]}"; do
             number=$(printf "%03d" "$((i + 1))")
             cp -f "${TRACKS[$i]}" "$MUSIC/$number.mp3"
-            echo "Prepared $number.mp3"
           done
 
-          echo "All 16 MP3 files are ready"
-
-      - name: Configure Java and Kotlin targets
-        shell: bash
-        run: |
-          cat > "$RUNNER_TEMP/targets.gradle" <<'GRADLE'
-          allprojects {
-            afterEvaluate {
-              tasks.withType(org.gradle.api.tasks.compile.JavaCompile).configureEach {
-                sourceCompatibility = '17'
-                targetCompatibility = '17'
-              }
-
-              tasks.matching {
-                it.name.startsWith('compile') && it.name.endsWith('Kotlin')
-              }.configureEach {
-                kotlinOptions.jvmTarget = '17'
-              }
-            }
-          }
-          GRADLE
-
       - name: Build debug APK
-        run: gradle -I "$RUNNER_TEMP/targets.gradle" -p "$PROJECT_DIR" assembleDebug
+        run: gradle -p "$PROJECT_DIR" assembleDebug
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4

@@ -82,32 +82,32 @@ jobs:
           app = app_path.read_text()
 
           if 'com.google.gms.google-services' not in root:
-              match = re.search(r'plugins\\s*\\{', root)
+              match = re.search(r'plugins\s*\\{', root)
               if not match:
                   raise SystemExit('Root Gradle plugins block not found; refusing unsafe patch')
               end = root.find('}', match.end())
               if end < 0:
                   raise SystemExit('Root Gradle plugins block is incomplete')
-              root = root[:end] + '\\n    id("com.google.gms.google-services") version "4.4.2" apply false\\n' + root[end:]
+              root = root[:end] + '\n    id("com.google.gms.google-services") version "4.4.2" apply false\n' + root[end:]
 
           if 'com.google.gms.google-services' not in app:
-              match = re.search(r'plugins\\s*\\{', app)
+              match = re.search(r'plugins\s*\\{', app)
               if not match:
                   raise SystemExit('App Gradle plugins block not found; refusing unsafe patch')
               end = app.find('}', match.end())
               if end < 0:
                   raise SystemExit('App Gradle plugins block is incomplete')
-              app = app[:end] + '\\n    id("com.google.gms.google-services")\\n' + app[end:]
+              app = app[:end] + '\n    id("com.google.gms.google-services")\n' + app[end:]
 
           if 'com.google.firebase:firebase-auth' not in app:
-              match = re.search(r'dependencies\\s*\\{', app)
+              match = re.search(r'dependencies\s*\\{', app)
               if not match:
                   raise SystemExit('App Gradle dependencies block not found; refusing unsafe patch')
               end = app.find('}', match.end())
               if end < 0:
                   raise SystemExit('App Gradle dependencies block is incomplete')
-              firebase = ('\\n    implementation(platform("com.google.firebase:firebase-bom:33.7.0"))'
-                          '\\n    implementation("com.google.firebase:firebase-auth")\\n')
+              firebase = ('\n    implementation(platform("com.google.firebase:firebase-bom:33.7.0"))'
+                          '\n    implementation("com.google.firebase:firebase-auth")\n')
               app = app[:end] + firebase + app[end:]
 
           root_path.write_text(root)
@@ -193,6 +193,14 @@ jobs:
 
       - name: Build debug APK
         run: gradle -p "$PROJECT_DIR" assembleDebug
+
+      - name: Print Android debug signing fingerprints
+        shell: bash
+        run: |
+          set -euo pipefail
+          KEYSTORE="$HOME/.android/debug.keystore"
+          test -f "$KEYSTORE" || { echo 'Debug keystore not found'; exit 1; }
+          keytool -list -v -keystore "$KEYSTORE" -alias androiddebugkey -storepass android -keypass android | grep -E 'SHA1:|SHA256:'
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4

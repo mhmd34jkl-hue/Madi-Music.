@@ -15,6 +15,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
+import androidx.compose.material3.IconButton
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.LibraryMusic
 import androidx.compose.material.icons.filled.Pause
@@ -125,11 +126,12 @@ private fun MadiMusic(player: Player?) {
                     0 -> HomePage(
                         query, { query = it }, artistFilter, { artistFilter = it },
                         artists, tracks.mapIndexed { index, track -> index to track.title },
-                        tracks.map { it.artist }, selectedIndex, favorites, ::play,
+                        tracks.map { it.artist }, selectedIndex, favorites,
+                        { id -> if (favorites.contains(id)) favorites.remove(id) else favorites.add(id) }, ::play,
                         onSearch = { page = 1 }
                     )
-                    1 -> SearchPage(query, { query = it }, tracks, selectedIndex, favorites, ::play) 
-                    2 -> TrackListPage("مكتبتي", "كل أغانيك في مكان واحد", tracks.indices.toList(), tracks, selectedIndex, favorites, ::play)
+                    1 -> SearchPage(query, { query = it }, tracks, selectedIndex, favorites, { id -> if (favorites.contains(id)) favorites.remove(id) else favorites.add(id) }, ::play) 
+                    2 -> TrackListPage("مكتبتي", "كل أغانيك في مكان واحد", tracks.indices.toList(), tracks, selectedIndex, favorites, { id -> if (favorites.contains(id)) favorites.remove(id) else favorites.add(id) }, ::play)
                     3 -> TrackListPage("الأغاني المفضلة", "الأغاني التي حفظتها بقلبك", tracks.indices.filter { favorites.contains(tracks[it].id) }, tracks, selectedIndex, favorites, ::play)
                     else -> SettingsPage()
                 }
@@ -202,6 +204,7 @@ private fun HomePage(
     artistNames: List<String>,
     selected: Int,
     favorites: List<String>,
+    onFavorite: (String) -> Unit,
     onPlay: (Int) -> Unit,
     onSearch: () -> Unit
 ) {
@@ -243,7 +246,7 @@ private fun HomePage(
         }
         LazyColumn(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp), contentPadding = PaddingValues(bottom = 10.dp)) {
             itemsIndexed(filtered) { _, pair ->
-                TrackRow(pair.first, tracks[pair.first], selected, favorites.contains(tracks[pair.first].id), { onPlay(pair.first) }, {})
+                TrackRow(pair.first, tracks[pair.first], selected, favorites.contains(tracks[pair.first].id), { onPlay(pair.first) }, { onFavorite(tracks[pair.first].id) })
             }
         }
     }
@@ -256,6 +259,7 @@ private fun SearchPage(
     tracks: List<Track>,
     selected: Int,
     favorites: List<String>,
+    onFavorite: (String) -> Unit,
     onPlay: (Int) -> Unit
 ) {
     val results = tracks.indices.filter { i ->
@@ -275,7 +279,7 @@ private fun SearchPage(
             Text("${results.size} نتيجة", color = Muted, fontSize = 12.sp)
             LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 itemsIndexed(results) { _, index ->
-                    TrackRow(index, tracks[index], selected, favorites.contains(tracks[index].id), { onPlay(index) }, {})
+                    TrackRow(index, tracks[index], selected, favorites.contains(tracks[index].id), { onPlay(index) }, { onFavorite(tracks[index].id) })
                 }
             }
         }
@@ -290,6 +294,7 @@ private fun TrackListPage(
     tracks: List<Track>,
     selected: Int,
     favorites: List<String>,
+    onFavorite: (String) -> Unit,
     onPlay: (Int) -> Unit
 ) {
     Column(Modifier.fillMaxSize().padding(horizontal = 18.dp)) {
@@ -330,7 +335,7 @@ private fun TrackRow(
             Text(track.title, color = Color.White, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
             Text(track.artist, color = Muted, fontSize = 11.sp)
         }
-        if (favorite) Icon(Icons.Default.Favorite, null, tint = Color(0xFFFF75AE), modifier = Modifier.size(17.dp))
+        IconButton(onClick = onFavorite) {\n            Icon(if (favorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder, null, tint = if (favorite) Color(0xFFFF75AE) else Muted, modifier = Modifier.size(19.dp))\n        }
     }
 }
 

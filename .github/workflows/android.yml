@@ -23,13 +23,29 @@ jobs:
           distribution: temurin
           java-version: '17'
 
+      - name: Install Android SDK
+        uses: android-actions/setup-android@v3
+        with:
+          packages: platform-tools
+          accept-android-sdk-licenses: false
+
       - name: Accept Android SDK licenses
         shell: bash
         run: |
-          set -e
+          set -euo pipefail
+          mkdir -p "$ANDROID_HOME/licenses"
+          printf '%s\n' \
+            '24333f8a63b6825ea9c5514f83c2829b004d1fee' \
+            'd56f5187479451eabf01fb78af6dfcb131a6481e' \
+            '8933bad161af4178b1185d1a37fbf41ea5269c55' \
+            '84831b9409646a918e30573bab4c9c91346d8abd' \
+            '504667f4c0de7af1a06de9f4b1727b84351b0e' \
+            > "$ANDROID_HOME/licenses/android-sdk-license"
+          printf '%s\n' \
+            '601085b94cd77f0b54ff86406957099ebe79c4d6' \
+            > "$ANDROID_HOME/licenses/android-sdk-preview-license"
           SDKMANAGER="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
-          test -x "$SDKMANAGER"
-          yes | "$SDKMANAGER" --licenses
+          "$SDKMANAGER" --licenses
 
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v4
@@ -37,7 +53,9 @@ jobs:
           gradle-version: '8.9'
 
       - name: Install 7-Zip
-        run: sudo apt-get update && sudo apt-get install -y p7zip-full
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y p7zip-full
 
       - name: Extract Android project
         shell: bash
@@ -51,7 +69,7 @@ jobs:
           test -n "$PROJECT" || { echo 'settings.gradle.kts not found'; exit 1; }
           echo "PROJECT_DIR=$PROJECT" >> "$GITHUB_ENV"
 
-      - name: Download audio packs from this release
+      - name: Download audio packs from release
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}

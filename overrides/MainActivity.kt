@@ -466,55 +466,207 @@ private fun SettingsPage() {
             context.packageManager.getPackageInfo(context.packageName, 0).versionName ?: "غير معروف"
         } catch (_: Exception) { "غير معروف" }
     }
-    Column(Modifier.fillMaxSize().padding(horizontal = 18.dp)) {
-        Text("الإعدادات", color = Color.White, fontSize = 27.sp, fontWeight = FontWeight.ExtraBold)
-        Text("تحكّم في تجربتك داخل Madi Music", color = Muted, fontSize = 12.sp)
-        Spacer(Modifier.height(16.dp))
-        LazyColumn(verticalArrangement = Arrangement.spacedBy(10.dp), contentPadding = PaddingValues(bottom = 18.dp)) {
-            item {
-                SettingsCard("حسابك", "إدارة حسابك الشخصي", "👤") {
-                    Text("لا تحتاج إلى حساب لتشغيل موسيقاك. ميزات الحساب والمزامنة يمكن إضافتها لاحقاً.", color = Muted, fontSize = 12.sp)
-                }
+    var infoDialog by remember { mutableStateOf<String?>(null) }
+
+    Column(
+        Modifier.fillMaxSize().background(
+            Brush.verticalGradient(listOf(Color(0xFF171024), Night, Night))
+        ).padding(horizontal = 18.dp)
+    ) {
+        Row(
+            Modifier.fillMaxWidth().padding(top = 7.dp, bottom = 5.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column(Modifier.weight(1f)) {
+                Text("مركز التحكم", color = Color.White, fontSize = 27.sp, fontWeight = FontWeight.ExtraBold)
+                Text("كل تفاصيل تجربتك الموسيقية في مكان واحد", color = Muted, fontSize = 11.sp)
             }
-            item {
-                SettingsCard("حول التطبيق", "معلومات عن Madi Music", "ⓘ") {
-                    Text("Madi Music — مشغل موسيقى يضع مكتبتك في متناولك حتى دون اتصال بالإنترنت.", color = Muted, fontSize = 12.sp)
-                    Spacer(Modifier.height(8.dp))
-                    Text("إصدار التطبيق: $version", color = Color(0xFFDCC4FF), fontWeight = FontWeight.Bold, fontSize = 13.sp)
-                }
-            }
-            item {
-                SettingsCard("اتصل بالدعم", "نحن هنا لمساعدتك", "✉") {
-                    Text("تواصل مع فريق الدعم عبر واتساب.", color = Muted, fontSize = 12.sp)
-                    Spacer(Modifier.height(10.dp))
-                    Button(
-                        onClick = {
-                            val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://wa.me/$SupportNumber"))
-                            context.startActivity(intent)
-                        },
-                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF63389A)),
-                        shape = RoundedCornerShape(12.dp)
-                    ) { Text("فتح واتساب للدعم") }
-                }
+            Box(
+                Modifier.size(43.dp).background(
+                    Brush.linearGradient(listOf(Color(0xFFB33CFF), Color(0xFF44205F))),
+                    RoundedCornerShape(15.dp)
+                ),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(Icons.Default.Settings, null, tint = Color.White, modifier = Modifier.size(23.dp))
             }
         }
+
+        LazyColumn(
+            verticalArrangement = Arrangement.spacedBy(14.dp),
+            contentPadding = PaddingValues(top = 12.dp, bottom = 24.dp)
+        ) {
+            item {
+                Column(
+                    Modifier.fillMaxWidth().background(
+                        Brush.linearGradient(listOf(Color(0xFF482267), Color(0xFF21152F), Color(0xFF15111E))),
+                        RoundedCornerShape(24.dp)
+                    ).padding(18.dp)
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Box(
+                            Modifier.size(58.dp).background(Color(0xFF6E3B91), RoundedCornerShape(19.dp)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text("M", color = Color.White, fontSize = 35.sp, fontWeight = FontWeight.Black)
+                        }
+                        Spacer(Modifier.width(13.dp))
+                        Column(Modifier.weight(1f)) {
+                            Text("حساب Madi Music", color = Color.White, fontSize = 17.sp, fontWeight = FontWeight.ExtraBold)
+                            Text("سجّل دخولك لمزامنة تجربتك", color = Color(0xFFD8C7E8), fontSize = 11.sp)
+                        }
+                        Text("✦", color = Color(0xFFE6C8FF), fontSize = 25.sp)
+                    }
+                    Spacer(Modifier.height(15.dp))
+                    Text(
+                        "تسجيل الدخول الحقيقي عبر Google وFacebook قيد الربط. لن نعرض أزراراً شكلية قبل إعداد الاتصال الآمن.",
+                        color = Color(0xFFE0D3EC),
+                        fontSize = 11.sp,
+                        lineHeight = 17.sp
+                    )
+                    Spacer(Modifier.height(13.dp))
+                    Surface(
+                        color = Color(0x3325C78A),
+                        shape = RoundedCornerShape(30.dp)
+                    ) {
+                        Text(
+                            "●  تشغيل الموسيقى دون حساب متاح دائماً",
+                            Modifier.padding(horizontal = 11.dp, vertical = 7.dp),
+                            color = Color(0xFF9CE8C8),
+                            fontSize = 10.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                }
+            }
+
+            item {
+                SettingsSection("التخصيص", "اجعل Madi Music على ذوقك") {
+                    SettingsRow("🎨", "المظهر والألوان", "الثيم الداكن واللمسات البنفسجية", "قريباً") {
+                        infoDialog = "خيارات المظهر والألوان"
+                    }
+                    SettingsRow("文", "اللغة", "العربية والإنجليزية", "قريباً") {
+                        infoDialog = "اختيار لغة التطبيق"
+                    }
+                    SettingsRow("Aa", "الخطوط", "مظهر كتابة أنيق وواضح", "قريباً") {
+                        infoDialog = "إعدادات الخطوط"
+                    }
+                }
+            }
+
+            item {
+                SettingsSection("الصوت والتشغيل", "تحكّم في طريقة استماعك") {
+                    SettingsRow("♫", "معادل الصوت", "تحسين الجهير والوضوح والتوازن", "قريباً") {
+                        infoDialog = "معادل الصوت"
+                    }
+                    SettingsRow("⏭", "تجربة التشغيل", "الانتقال السلس والتشغيل المتواصل", "قريباً") {
+                        infoDialog = "خيارات التشغيل"
+                    }
+                    SettingsRow("🎧", "جودة الصوت", "إعدادات الصوت المحلية", "قريباً") {
+                        infoDialog = "جودة الصوت"
+                    }
+                }
+            }
+
+            item {
+                SettingsSection("المكتبة والتخزين", "موسيقاك تبقى على جهازك") {
+                    SettingsRow("⬇", "إدارة الملفات", "الأغاني المحفوظة والمساحة المستخدمة", "قريباً") {
+                        infoDialog = "إدارة التخزين"
+                    }
+                    SettingsRow("♡", "المفضلة", "إدارة الأغاني التي تحبها", null) {
+                        infoDialog = "يمكنك إدارة المفضلة من تبويب المفضلة أسفل التطبيق."
+                    }
+                }
+            }
+
+            item {
+                SettingsSection("الدعم والتطبيق", "نحن هنا لمساعدتك") {
+                    SettingsRow("✉", "الدعم والمساعدة", "مساعد Madi ثم التواصل عبر واتساب", null) {
+                        val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://wa.me/$SupportNumber"))
+                        context.startActivity(intent)
+                    }
+                    SettingsRow("ⓘ", "حول Madi Music", "الإصدار $version", null) {
+                        infoDialog = "Madi Music\nمشغل موسيقى مستقل، صُنع بكل شغف على يد شاب ليبي من ضواحي بنغازي.\nالإصدار: $version"
+                    }
+                    SettingsRow("🔒", "الخصوصية والأمان", "حماية حسابك وبياناتك", "قريباً") {
+                        infoDialog = "معلومات الخصوصية والأمان"
+                    }
+                }
+            }
+
+            item {
+                Text(
+                    "MADI MUSIC  •  MADE WITH PASSION IN LIBYA 🇱🇾",
+                    Modifier.fillMaxWidth().padding(top = 2.dp),
+                    color = Color(0xFF756783),
+                    fontSize = 9.sp,
+                    letterSpacing = 1.2.sp,
+                    textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                )
+            }
+        }
+    }
+
+    infoDialog?.let { message ->
+        AlertDialog(
+            onDismissRequest = { infoDialog = null },
+            containerColor = Color(0xFF21172E),
+            title = { Text("Madi Music", color = Color.White, fontWeight = FontWeight.Bold) },
+            text = { Text(message, color = Color(0xFFD4C6E2), fontSize = 13.sp, lineHeight = 19.sp) },
+            confirmButton = {
+                TextButton(onClick = { infoDialog = null }) {
+                    Text("حسناً", color = Color(0xFFD6A8FF))
+                }
+            }
+        )
     }
 }
 
 @Composable
-private fun SettingsCard(title: String, subtitle: String, symbol: String, content: @Composable ColumnScope.() -> Unit) {
-    Column(Modifier.fillMaxWidth().background(Panel, RoundedCornerShape(17.dp)).padding(15.dp)) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Box(Modifier.size(38.dp).background(Color(0xFF38234F), RoundedCornerShape(11.dp)), contentAlignment = Alignment.Center) {
-                Text(symbol, color = Color(0xFFE2C8FF), fontSize = 18.sp)
-            }
-            Spacer(Modifier.width(11.dp))
-            Column {
-                Text(title, color = Color.White, fontWeight = FontWeight.Bold)
-                Text(subtitle, color = Muted, fontSize = 11.sp)
-            }
-        }
-        Spacer(Modifier.height(12.dp))
+private fun SettingsSection(
+    title: String,
+    subtitle: String,
+    content: @Composable ColumnScope.() -> Unit
+) {
+    Column(
+        Modifier.fillMaxWidth().background(Panel, RoundedCornerShape(21.dp)).padding(15.dp)
+    ) {
+        Text(title, color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.ExtraBold)
+        Text(subtitle, color = Muted, fontSize = 10.sp)
+        Spacer(Modifier.height(8.dp))
         content()
+    }
+}
+
+@Composable
+private fun SettingsRow(
+    symbol: String,
+    title: String,
+    subtitle: String,
+    tag: String?,
+    onClick: () -> Unit
+) {
+    Row(
+        Modifier.fillMaxWidth().clickable(onClick = onClick).padding(vertical = 10.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Box(
+            Modifier.size(39.dp).background(Color(0xFF30213F), RoundedCornerShape(13.dp)),
+            contentAlignment = Alignment.Center
+        ) {
+            Text(symbol, color = Color(0xFFE1C2FF), fontSize = 18.sp, fontWeight = FontWeight.Bold)
+        }
+        Spacer(Modifier.width(11.dp))
+        Column(Modifier.weight(1f)) {
+            Text(title, color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+            Text(subtitle, color = Muted, fontSize = 10.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        }
+        if (tag != null) {
+            Surface(color = Color(0x332B1746), shape = RoundedCornerShape(20.dp)) {
+                Text(tag, Modifier.padding(horizontal = 9.dp, vertical = 5.dp), color = Color(0xFFD3B3F4), fontSize = 9.sp)
+            }
+        } else {
+            Text("›", color = Color(0xFF8D7A9F), fontSize = 22.sp, modifier = Modifier.padding(horizontal = 5.dp))
+        }
     }
 }

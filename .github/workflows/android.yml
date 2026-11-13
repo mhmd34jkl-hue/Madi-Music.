@@ -23,17 +23,12 @@ jobs:
           distribution: temurin
           java-version: '17'
 
-      - name: Install Android SDK
-        uses: android-actions/setup-android@v3
-        with:
-          accept-android-sdk-licenses: false
-
       - name: Accept Android SDK licenses
         shell: bash
         run: |
-          set -euo pipefail
-          SDKMANAGER=$(find "$ANDROID_HOME/cmdline-tools" -type f -name sdkmanager | sort -V | tail -n 1)
-          test -n "$SDKMANAGER"
+          set -e
+          SDKMANAGER="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
+          test -x "$SDKMANAGER"
           yes | "$SDKMANAGER" --licenses
 
       - name: Set up Gradle

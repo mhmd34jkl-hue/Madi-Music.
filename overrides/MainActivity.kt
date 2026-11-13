@@ -106,7 +106,7 @@ private fun MadiMusic(player: Player?) {
         Column(
             Modifier.fillMaxSize().background(
                 Brush.verticalGradient(listOf(Color(0xFF211333), Night, Night))
-            )
+            ).statusBarsPadding()
         ) {
             Row(
                 Modifier.fillMaxWidth().padding(start = 18.dp, end = 18.dp, top = 22.dp, bottom = 14.dp),

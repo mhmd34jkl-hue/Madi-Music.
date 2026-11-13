@@ -1,0 +1,47 @@
+{
+  "project_info": {
+    "project_number": "271420678515",
+    "project_id": "madi-music-e1501",
+    "storage_bucket": "madi-music-e1501.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:271420678515:android:b866a74a10d428e0bb2506",
+        "android_client_info": {
+          "package_name": "com.madi.music"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "271420678515-lu9m7qhtsmeuqkl3i56s6ptam4q2i7cr.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.madi.music",
+            "certificate_hash": "9469657ea9747bf06a36cb5322e9d6d0893e75f6"
+          }
+        },
+        {
+          "client_id": "271420678515-erinfoofn8hta6se3sndt18hqp3h81ub.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDqeyCfcTslZXaAPoCfVZ9B-rQeZtZdGZk"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "271420678515-erinfoofn8hta6se3sndt18hqp3h81ub.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

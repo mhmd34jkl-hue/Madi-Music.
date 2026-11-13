@@ -335,7 +335,9 @@ private fun TrackRow(
             Text(track.title, color = Color.White, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
             Text(track.artist, color = Muted, fontSize = 11.sp)
         }
-        IconButton(onClick = onFavorite) {\n            Icon(if (favorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder, null, tint = if (favorite) Color(0xFFFF75AE) else Muted, modifier = Modifier.size(19.dp))\n        }
+        IconButton(onClick = onFavorite) {
+            Icon(if (favorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder, null, tint = if (favorite) Color(0xFFFF75AE) else Muted, modifier = Modifier.size(19.dp))
+        }
     }
 }
 

@@ -1,3 +1,4 @@
+
 name: Build Madi Music APK
 
 on:
@@ -21,8 +22,18 @@ jobs:
           distribution: temurin
           java-version: '17'
 
-      - name: Install Android SDK and archive tools
+      - name: Install Android SDK
         uses: android-actions/setup-android@v3
+        with:
+          accept-android-sdk-licenses: false
+
+      - name: Accept Android SDK licenses
+        shell: bash
+        run: |
+          set -euo pipefail
+          SDKMANAGER=$(find "$ANDROID_HOME/cmdline-tools" -type f -name sdkmanager | sort -V | tail -n 1)
+          test -n "$SDKMANAGER"
+          yes | "$SDKMANAGER" --licenses
 
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v4

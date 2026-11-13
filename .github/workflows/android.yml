@@ -63,6 +63,58 @@ jobs:
           test -n "$PROJECT" || { echo 'Project not found'; exit 1; }
           echo "PROJECT_DIR=$PROJECT" >> "$GITHUB_ENV"
 
+      - name: Configure Firebase Android SDK
+        shell: bash
+        run: |
+          set -euo pipefail
+          APP="$PROJECT_DIR/app"
+          ROOT_BUILD="$PROJECT_DIR/build.gradle.kts"
+          APP_BUILD="$APP/build.gradle.kts"
+          test -f google-services.json || { echo 'google-services.json missing from repository root'; exit 1; }
+          test -f "$ROOT_BUILD" || { echo 'Root build.gradle.kts not found'; exit 1; }
+          test -f "$APP_BUILD" || { echo 'App build.gradle.kts not found'; exit 1; }
+          mkdir -p "$APP"
+          cp google-services.json "$APP/google-services.json"
+          python3 - "$ROOT_BUILD" "$APP_BUILD" <<'PY'
+          import pathlib, re, sys
+          root_path, app_path = map(pathlib.Path, sys.argv[1:])
+          root = root_path.read_text()
+          app = app_path.read_text()
+
+          if 'com.google.gms.google-services' not in root:
+              match = re.search(r'plugins\\s*\\{', root)
+              if not match:
+                  raise SystemExit('Root Gradle plugins block not found; refusing unsafe patch')
+              end = root.find('}', match.end())
+              if end < 0:
+                  raise SystemExit('Root Gradle plugins block is incomplete')
+              root = root[:end] + '\\n    id("com.google.gms.google-services") version "4.4.2" apply false\\n' + root[end:]
+
+          if 'com.google.gms.google-services' not in app:
+              match = re.search(r'plugins\\s*\\{', app)
+              if not match:
+                  raise SystemExit('App Gradle plugins block not found; refusing unsafe patch')
+              end = app.find('}', match.end())
+              if end < 0:
+                  raise SystemExit('App Gradle plugins block is incomplete')
+              app = app[:end] + '\\n    id("com.google.gms.google-services")\\n' + app[end:]
+
+          if 'com.google.firebase:firebase-auth' not in app:
+              match = re.search(r'dependencies\\s*\\{', app)
+              if not match:
+                  raise SystemExit('App Gradle dependencies block not found; refusing unsafe patch')
+              end = app.find('}', match.end())
+              if end < 0:
+                  raise SystemExit('App Gradle dependencies block is incomplete')
+              firebase = ('\\n    implementation(platform("com.google.firebase:firebase-bom:33.7.0"))'
+                          '\\n    implementation("com.google.firebase:firebase-auth")\\n')
+              app = app[:end] + firebase + app[end:]
+
+          root_path.write_text(root)
+          app_path.write_text(app)
+          print('Firebase configuration and Authentication SDK added')
+          PY
+
       - name: Download audio packs from release
         env:
           GH_TOKEN: ${{ github.token }}

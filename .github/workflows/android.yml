@@ -1,6 +1,8 @@
 name: Build Madi Music APK
 
 on:
+  push:
+    branches: [madi-ui-upgrade]
   workflow_dispatch:
   release:
     types: [published]
@@ -115,6 +117,27 @@ jobs:
           mkdir -p "$DEST"
           cp overrides/MainActivity.kt "$DEST/MainActivity.kt"
           echo "Redesigned MainActivity installed"
+
+      - name: Create premium launcher icon
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo apt-get update
+          sudo apt-get install -y imagemagick
+          PROJECT="$PROJECT_DIR"
+          RES="$PROJECT/app/src/main/res"
+          mkdir -p "$RES/drawable"
+          convert -background none assets/madi-launcher.svg -resize 512x512 "$RES/drawable/madi_launcher.png"
+          for spec in "mdpi:48" "hdpi:72" "xhdpi:96" "xxhdpi:144" "xxxhdpi:192"; do
+            density="${spec%%:*}"
+            pixels="${spec##*:}"
+            mkdir -p "$RES/mipmap-$density"
+            convert "$RES/drawable/madi_launcher.png" -resize "${pixels}x${pixels}" "$RES/mipmap-$density/ic_launcher.png"
+            cp "$RES/mipmap-$density/ic_launcher.png" "$RES/mipmap-$density/ic_launcher_round.png"
+          done
+          MANIFEST="$PROJECT/app/src/main/AndroidManifest.xml"
+          sed -i 's#<application #<application android:icon="@mipmap/ic_launcher" android:roundIcon="@mipmap/ic_launcher_round" #' "$MANIFEST"
+          echo "Custom Madi Music launcher icon installed"
 
       - name: Build debug APK
         run: gradle -p "$PROJECT_DIR" assembleDebug

@@ -67,8 +67,9 @@ jobs:
             esac
           done
           find extracted -type f -iname '*.mp3' -exec cp -f {} "$MUSIC/" \;
-          for n in $(seq -w 1 16); do
-            test -s "$MUSIC/$n.mp3" || { echo "Missing music/$n.mp3"; exit 1; }
+          for n in $(seq 1 16); do
+            name=$(printf "%03d" "$n")
+            test -s "$MUSIC/$name.mp3" || { echo "Missing music/$name.mp3"; exit 1; }
           done
           echo "Verified 16 MP3 files"
 

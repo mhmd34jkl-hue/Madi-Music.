@@ -191,6 +191,12 @@ jobs:
           sed -i 's#<application #<application android:icon="@mipmap/ic_launcher" android:roundIcon="@mipmap/ic_launcher_round" #' "$MANIFEST"
           echo "Custom Madi Music launcher icon installed"
 
+      - name: Restore stable Android debug keystore
+        uses: actions/cache@v4
+        with:
+          path: ~/.android/debug.keystore
+          key: madi-music-debug-keystore-v1
+
       - name: Create Android debug keystore
         shell: bash
         run: |

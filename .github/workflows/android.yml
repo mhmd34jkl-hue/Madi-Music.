@@ -1,4 +1,3 @@
-
 name: Build Madi Music APK
 
 on:
@@ -108,54 +107,14 @@ jobs:
             cp -f "${TRACKS[$i]}" "$MUSIC/$number.mp3"
           done
 
-      - name: Repair MainActivity automatically
+      - name: Install redesigned Madi Music interface
         shell: bash
         run: |
           set -euo pipefail
-          FILE="$PROJECT_DIR/app/src/main/java/com/madi/music/MainActivity.kt"
-
-          python3 - "$FILE" <<'PY'
-          import re
-          import sys
-          from pathlib import Path
-
-          path = Path(sys.argv[1])
-          source = path.read_text()
-
-          start = source.find(
-              'private data class Track(val title: String, val artist: String, val file: String)'
-          )
-          end = source.find('class MainActivity', start)
-
-          if start == -1 or end == -1:
-              raise SystemExit("Could not locate duplicate Track section")
-
-          source = source[:start] + source[end:]
-
-          marker = '@Composable\nprivate fun MadiMusic(player: Player?) {\n'
-          if marker not in source:
-              raise SystemExit("Could not locate MadiMusic function")
-
-          source = source.replace(
-              marker,
-              marker + '    val tracks = MusicCatalog.tracks\n',
-              1
-          )
-
-          old = '''        val uri = Uri.parse("asset:///music/${tracks[index].file}")
-                  player?.setMediaItem(MediaItem.fromUri(uri)); player?.prepare(); player?.play()'''
-
-          new = '''        player?.setMediaItem(MusicCatalog.mediaItems()[index])
-                  player?.prepare()
-                  player?.play()'''
-
-          if old not in source:
-              raise SystemExit("Could not locate old play code")
-
-          source = source.replace(old, new, 1)
-          path.write_text(source)
-          print("MainActivity repaired successfully")
-          PY
+          DEST="$PROJECT_DIR/app/src/main/java/com/madi/music"
+          mkdir -p "$DEST"
+          cp overrides/MainActivity.kt "$DEST/MainActivity.kt"
+          echo "Redesigned MainActivity installed"
 
       - name: Build debug APK
         run: gradle -p "$PROJECT_DIR" assembleDebug

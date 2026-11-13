@@ -247,6 +247,8 @@ private fun MadiIntroScreen() {
                 fontWeight = FontWeight.Medium
             )
             Spacer(Modifier.height(9.dp))
+            Text("M + K = 78 ❤️", color = Color(0xFFE7C5FF), fontSize = 13.sp, fontWeight = FontWeight.Bold)
+            Spacer(Modifier.height(7.dp))
             Text("MADE IN LIBYA  •  🇱🇾", color = Muted, fontSize = 10.sp, letterSpacing = 2.sp)
         }
         Text(

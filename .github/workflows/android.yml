@@ -1,3 +1,4 @@
+
 name: Build Madi Music APK
 
 on:
@@ -11,7 +12,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Download project source
+      - name: Checkout
         uses: actions/checkout@v4
 
       - name: Set up Java
@@ -20,62 +21,34 @@ jobs:
           distribution: temurin
           java-version: '17'
 
-      - name: Install Android tools
-        uses: android-actions/setup-android@v3
+      - name: Install tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y unzip p7zip-full
+          yes | sdkmanager --licenses
+          sdkmanager "platforms;android-35" "build-tools;35.0.0"
 
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '8.9'
 
-      - name: Install archive tools and Android SDK
+      - name: Extract Android project
         run: |
-          sudo apt-get update
-          sudo apt-get install -y unzip p7zip-full
-          sdkmanager "platforms;android-35" "build-tools;35.0.0"
-
-      - name: Download music packs from GitHub Release
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          mkdir -p audio-packs
-          for asset in \
-            "01-Cheb-Akil.zip" \
-            "02-Cheb-MoMo-A.zip" \
-            "03-Cheb-MoMo-B.zip" \
-            "05-Aljundi.7z" \
-            "06-Rafea.7z" \
-            "07-Colomby.7z"
-          do
-            gh release download \
-              --repo "$GITHUB_REPOSITORY" \
-              --pattern "$asset" \
-              --dir audio-packs
-          done
-
-      - name: Prepare offline music
-        run: |
-          PROJECT="MadiMusic-Android"
-          mkdir -p "$PROJECT/app/src/main/assets/music"
-
-          for f in audio-packs/*.zip; do
-            unzip -o -q "$f" -d "$PROJECT/app/src/main/assets"
-          done
-
-          for f in audio-packs/*.7z; do
-            7z x -y "$f" -o"$PROJECT/app/src/main/assets" >/dev/null
-          done
-
-          COUNT=$(find "$PROJECT/app/src/main/assets/music" -maxdepth 1 -name '*.mp3' | wc -l)
-          echo "Found $COUNT MP3 files"
-          test "$COUNT" -eq 16
+          ZIP=$(find . -maxdepth 1 -iname 'MadiMusic-Android-Source*.zip' | head -1)
+          test -n "$ZIP"
+          mkdir project
+          unzip -q "$ZIP" -d project
+          PROJECT=$(find project -name settings.gradle.kts -printf '%h\n' | head -1)
+          test -n "$PROJECT"
+          echo "PROJECT=$PROJECT" >> "$GITHUB_ENV"
 
       - name: Build APK
-        run: gradle -p MadiMusic-Android assembleDebug
+        run: gradle -p "$PROJECT" assembleDebug
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: Madi-Music-APK
-          path: MadiMusic-Android/app/build/outputs/apk/debug/*.apk
+          path: ${{ env.PROJECT }}/app/build/outputs/apk/debug/*.apk
           if-no-files-found: error

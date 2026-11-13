@@ -35,6 +35,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import kotlinx.coroutines.delay
 import androidx.media3.common.Player
 import androidx.media3.session.MediaController
 import androidx.media3.session.SessionToken
@@ -68,6 +69,15 @@ class MainActivity : ComponentActivity() {
 
 @Composable
 private fun MadiMusic(player: Player?) {
+    var showIntro by remember { mutableStateOf(true) }
+    LaunchedEffect(Unit) {
+        delay(2800)
+        showIntro = false
+    }
+    if (showIntro) {
+        MadiIntroScreen()
+        return
+    }
     var page by remember { mutableIntStateOf(0) }
     var selectedIndex by remember { mutableIntStateOf(0) }
     var playing by remember { mutableStateOf(false) }
@@ -190,6 +200,61 @@ private fun MadiMusic(player: Player?) {
                 }
             }
         }
+    }
+}
+
+
+@Composable
+private fun MadiIntroScreen() {
+    Box(
+        Modifier.fillMaxSize().background(
+            Brush.radialGradient(
+                colors = listOf(Color(0xFF382052), Color(0xFF120C1D), Color(0xFF050509)),
+                radius = 950f
+            )
+        ),
+        contentAlignment = Alignment.Center
+    ) {
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Box(
+                Modifier.size(142.dp).background(
+                    Brush.linearGradient(listOf(Color(0xFFB33CFF), Color(0xFF4A1D70), Color(0xFF17101F))),
+                    RoundedCornerShape(38.dp)
+                ),
+                contentAlignment = Alignment.Center
+            ) {
+                Text("M", color = Color.White, fontSize = 100.sp, fontWeight = FontWeight.Black)
+                Text("♛", Modifier.align(Alignment.TopCenter).offset(y = (-17).dp), color = Color(0xFFE7D9F5), fontSize = 35.sp)
+            }
+            Spacer(Modifier.height(28.dp))
+            Text(
+                "MADI MUSIC",
+                color = Color.White,
+                fontSize = 31.sp,
+                fontWeight = FontWeight.Black,
+                letterSpacing = 4.sp
+            )
+            Spacer(Modifier.height(15.dp))
+            Box(Modifier.width(76.dp).height(2.dp).background(
+                Brush.horizontalGradient(listOf(Color.Transparent, Violet, Color.Transparent))
+            ))
+            Spacer(Modifier.height(18.dp))
+            Text(
+                "صُنع بكل شغف على يد شاب ليبي من ضواحي بنغازي",
+                color = Color(0xFFE1C9F7),
+                fontSize = 14.sp,
+                fontWeight = FontWeight.Medium
+            )
+            Spacer(Modifier.height(9.dp))
+            Text("MADE IN LIBYA  •  🇱🇾", color = Muted, fontSize = 10.sp, letterSpacing = 2.sp)
+        }
+        Text(
+            "OFFLINE MUSIC EXPERIENCE",
+            Modifier.align(Alignment.BottomCenter).padding(bottom = 30.dp),
+            color = Color(0xFF80758E),
+            fontSize = 9.sp,
+            letterSpacing = 2.sp
+        )
     }
 }
 

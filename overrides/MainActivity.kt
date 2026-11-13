@@ -306,7 +306,7 @@ private fun TrackListPage(
         } else {
             LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 itemsIndexed(indices) { _, index ->
-                    TrackRow(index, tracks[index], selected, favorites.contains(tracks[index].id), { onPlay(index) }, {})
+                    TrackRow(index, tracks[index], selected, favorites.contains(tracks[index].id), { onPlay(index) }, { onFavorite(tracks[index].id) })
                 }
             }
         }

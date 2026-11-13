@@ -12,6 +12,7 @@ permissions:
 jobs:
   build:
     runs-on: ubuntu-latest
+
     steps:
       - name: Checkout project
         uses: actions/checkout@v4
@@ -59,7 +60,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
-              run: |
+        run: |
           set -euo pipefail
           mkdir -p audio-packs
           if [ "$GITHUB_EVENT_NAME" = "release" ]; then

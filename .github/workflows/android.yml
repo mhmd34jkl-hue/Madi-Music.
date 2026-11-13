@@ -59,10 +59,15 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
-        run: |
+              run: |
           set -euo pipefail
           mkdir -p audio-packs
-          gh release download "${GITHUB_REF_NAME}" --repo "$GH_REPO" --dir audio-packs
+          if [ "$GITHUB_EVENT_NAME" = "release" ]; then
+            TAG="$GITHUB_REF_NAME"
+          else
+            TAG="$(gh release view --repo "$GH_REPO" --json tagName --jq .tagName)"
+          fi
+          gh release download "$TAG" --repo "$GH_REPO" --dir audio-packs
           ls -lah audio-packs
 
       - name: Put all 16 MP3 files into app assets

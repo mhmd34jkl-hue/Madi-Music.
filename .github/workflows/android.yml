@@ -117,8 +117,28 @@ jobs:
 
           echo "All 16 MP3 files are ready"
 
+      - name: Configure Java and Kotlin targets
+        shell: bash
+        run: |
+          cat > "$RUNNER_TEMP/targets.gradle" <<'GRADLE'
+          allprojects {
+            afterEvaluate {
+              tasks.withType(org.gradle.api.tasks.compile.JavaCompile).configureEach {
+                sourceCompatibility = '17'
+                targetCompatibility = '17'
+              }
+
+              tasks.matching {
+                it.name.startsWith('compile') && it.name.endsWith('Kotlin')
+              }.configureEach {
+                kotlinOptions.jvmTarget = '17'
+              }
+            }
+          }
+          GRADLE
+
       - name: Build debug APK
-        run: gradle -p "$PROJECT_DIR" assembleDebug
+        run: gradle -I "$RUNNER_TEMP/targets.gradle" -p "$PROJECT_DIR" assembleDebug
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4

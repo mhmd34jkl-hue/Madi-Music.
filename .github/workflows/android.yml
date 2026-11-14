@@ -246,7 +246,8 @@ jobs:
           PROJECT="$PROJECT_DIR"
           RES="$PROJECT/app/src/main/res"
           mkdir -p "$RES/drawable" "$RES/mipmap-anydpi-v26"
-          convert -background none assets/madi-launcher.svg -resize 512x512 "$RES/drawable/madi_launcher.png"
+          test -s madi-launcher.png || { echo "madi-launcher.png missing from repository root"; exit 1; }
+          convert madi-launcher.png -resize 512x512 "$RES/drawable/madi_launcher.png"
           for spec in "mdpi:48" "hdpi:72" "xhdpi:96" "xxhdpi:144" "xxxhdpi:192"; do
             density="${spec%%:*}"
             pixels="${spec##*:}"

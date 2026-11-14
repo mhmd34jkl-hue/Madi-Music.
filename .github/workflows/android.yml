@@ -155,25 +155,58 @@ jobs:
             esac
           done
 
-          mapfile -d '' -t TRACKS < <(
-            find extracted -type f -iname '*.mp3' -print0 | sort -zV
+          pick_track() {
+            local pattern="$1"
+            local folder="$2"
+            local result
+            result="$(find "$folder" -type f -iname "$pattern" -print -quit)"
+            if [ -z "$result" ]; then
+              echo "Missing audio match: $pattern in $folder" >&2
+              exit 1
+            fi
+            printf '%s' "$result"
+          }
+
+          # Explicit title-to-file mapping. Never sort unrelated song names alphabetically.
+          TRACKS=(
+            "$(pick_track '001.mp3' 'extracted/01-Cheb-Akil')"
+            "$(pick_track '002.mp3' 'extracted/01-Cheb-Akil')"
+            "$(pick_track '003.mp3' 'extracted/01-Cheb-Akil')"
+            "$(pick_track '004.mp3' 'extracted/02-Cheb-MoMo-A')"
+            "$(pick_track '005.mp3' 'extracted/02-Cheb-MoMo-A')"
+            "$(pick_track '006.mp3' 'extracted/03-Cheb-MoMo-B')"
+            "$(pick_track '007.mp3' 'extracted/03-Cheb-MoMo-B')"
+            "$(pick_track '*كوالالمبور*.mp3' 'extracted/04-Aljundi')"
+            "$(pick_track '*لاريا*.mp3' 'extracted/04-Aljundi')"
+            "$(pick_track '*دمعة*.mp3' 'extracted/04-Aljundi')"
+            "$(pick_track '*يدوم عليهم*.mp3' 'extracted/05-Rafea-Alakoky')"
+            "$(pick_track '*مش اثنين ونحنا واحد*.mp3' 'extracted/05-Rafea-Alakoky')"
+            "$(pick_track '*مانواطي شاني*.mp3' 'extracted/05-Rafea-Alakoky')"
+            "$(pick_track '*بابا نويل*.mp3' 'extracted/06-Colomby')"
+            "$(pick_track '*عيوني*.mp3' 'extracted/06-Colomby')"
+            "$(pick_track '*نظره*.mp3' 'extracted/06-Colomby')"
           )
 
-          echo "Found ${#TRACKS[@]} MP3 files"
+          echo "Verified explicit mapping for ${#TRACKS[@]} tracks"
           if [ "${#TRACKS[@]}" -ne 16 ]; then
-            echo "Expected 16 MP3 files but found ${#TRACKS[@]}"
-            printf '%s\n' "${TRACKS[@]}"
+            echo "Expected 16 MP3 files but mapped ${#TRACKS[@]}"
             exit 1
           fi
 
           MUSIC="$PROJECT_DIR/app/src/main/assets/music"
           mkdir -p "$MUSIC"
-
+          declare -A USED_SOURCES=()
           for i in "${!TRACKS[@]}"; do
             number=$(printf "%03d" "$((i + 1))")
-            test -s "${TRACKS[$i]}" || { echo "Empty audio file: ${TRACKS[$i]}"; exit 1; }
-            echo "Audio mapping: $number.mp3 <- ${TRACKS[$i]}"
-            cp -f "${TRACKS[$i]}" "$MUSIC/$number.mp3"
+            source="${TRACKS[$i]}"
+            test -s "$source" || { echo "Missing or empty audio: $source"; exit 1; }
+            if [[ -n "${USED_SOURCES[$source]:-}" ]]; then
+              echo "Audio source assigned twice: $source"
+              exit 1
+            fi
+            USED_SOURCES["$source"]=1
+            echo "Verified audio mapping: $number.mp3 <- $source"
+            cp -f "$source" "$MUSIC/$number.mp3"
           done
           test "$(find "$MUSIC" -maxdepth 1 -type f -name '*.mp3' | wc -l)" -eq 16
 

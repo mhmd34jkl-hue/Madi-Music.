@@ -121,6 +121,13 @@ jobs:
               if end < 0: raise SystemExit('App Gradle dependencies block is incomplete')
               app = app[:end] + '\n    implementation("com.google.android.gms:play-services-auth:21.3.0")\n' + app[end:]
 
+          if 'com.facebook.android:facebook-login' not in app:
+              match = re.search(r'dependencies\s*\{', app)
+              if not match: raise SystemExit('App Gradle dependencies block not found')
+              end = app.find('}', match.end())
+              if end < 0: raise SystemExit('App Gradle dependencies block is incomplete')
+              app = app[:end] + '\n    implementation("com.facebook.android:facebook-login:17.0.0")\n' + app[end:]
+
           root_path.write_text(root)
           app_path.write_text(app)
           print('Firebase configuration and Authentication SDK added')
@@ -288,8 +295,21 @@ jobs:
               s=s.replace('</application>', service+'\n</application>', 1)
           if 'androidx.media3.session.MediaSessionService' not in s:
               s=s.replace('</application>', '<service android:name=".MusicPlaybackService" android:exported="true" android:foregroundServiceType="mediaPlayback"><intent-filter><action android:name="androidx.media3.session.MediaSessionService" /></intent-filter></service>\n</application>', 1)
+          # Configure the Facebook Android SDK with the registered Meta App ID.
+          if 'com.facebook.sdk.ApplicationId' not in s:
+              s=s.replace('</application>', '<meta-data android:name="com.facebook.sdk.ApplicationId" android:value="@string/facebook_app_id" />\\n</application>', 1)
+          values=p.parent / 'res' / 'values'
+          values.mkdir(parents=True, exist_ok=True)
+          strings=values / 'strings.xml'
+          if strings.exists():
+              xml=strings.read_text()
+              if 'name="facebook_app_id"' not in xml:
+                  xml=xml.replace('</resources>', '    <string name="facebook_app_id">044204669717</string>\\n</resources>')
+              strings.write_text(xml)
+          else:
+              strings.write_text('<?xml version="1.0" encoding="utf-8"?>\\n<resources>\\n    <string name="facebook_app_id">044204669717</string>\\n</resources>\\n')
           p.write_text(s)
-          print('Manifest permissions, MediaSessionService and adaptive icon verified')
+          print('Manifest permissions, MediaSessionService, adaptive icon and Facebook App ID verified')
           PY
           echo "Adaptive Madi Music launcher icons installed"
 

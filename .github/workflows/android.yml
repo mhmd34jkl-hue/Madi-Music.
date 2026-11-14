@@ -237,12 +237,15 @@ jobs:
               s = unicodedata.normalize("NFKD", pathlib.PurePosixPath(s).stem).casefold()
               return "".join(ch for ch in s if ch.isalnum())
           members = []
+          all_entries = []
           with zipfile.ZipFile("New Folder.zip") as z:
               for info in z.infolist():
                   if info.is_dir(): continue
+                  entry = (info, norm(info.filename), pathlib.PurePosixPath(info.filename).name)
+                  all_entries.append(entry)
                   ext = pathlib.PurePosixPath(info.filename).suffix.casefold()
                   if ext in (".jpg", ".jpeg", ".png", ".webp"):
-                      members.append((info, norm(info.filename), pathlib.PurePosixPath(info.filename).name))
+                      members.append(entry)
               specs = [
                 ("cover_jak_el_marsoul", ["chebakiljakelmarsoul"]),
                 ("cover_histoire_kdima", ["histoirekdimajdiiid"]),
@@ -273,19 +276,24 @@ jobs:
                       dst.write(src.read())
                   print("COVER", target, "<-", info.filename, "=>", out.name)
               def find_named(wanted):
-                  hits = [(i,n) for i,k,n in members if k == wanted]
+                  hits = [(i,n) for i,k,n in all_entries if k == wanted]
                   if not hits:
-                      hits = [(i,n) for i,k,n in members if k.startswith(wanted)]
-                  if not hits: raise SystemExit("Missing ZIP image asset: " + wanted)
-                  return sorted(hits, key=lambda x:x[1].casefold())[0]
+                      hits = [(i,n) for i,k,n in all_entries if k.startswith(wanted)]
+                  for info, original in sorted(hits, key=lambda x:x[1].casefold()):
+                      try:
+                          with z.open(info) as src:
+                              import io
+                              im = Image.open(io.BytesIO(src.read())).convert("RGBA")
+                              im.load()
+                          return info, original, im
+                      except Exception:
+                          continue
+                  raise SystemExit("Missing readable ZIP image asset: " + wanted)
               for wanted, output in [("icon", "madi_user_icon.png"), ("loginscreen", "login_screen_reference.png")]:
-                  info, original = find_named(wanted)
+                  info, original, im = find_named(wanted)
                   dest = covers / output
-                  with z.open(info) as src:
-                      import io
-                      im = Image.open(io.BytesIO(src.read())).convert("RGBA")
-                      im.save(dest, format="PNG")
-                  print("DESIGN ASSET", wanted, "<-", info.filename, "=>", output, "size", Image.open(dest).size)
+                  im.save(dest, format="PNG")
+                  print("DESIGN ASSET", wanted, "<-", info.filename, "=>", output, "size", im.size)
           PY
           test "$(find "$PROJECT_DIR/app/src/main/res/drawable-nodpi" -maxdepth 1 -type f -name 'cover_*' | wc -l)" -eq 16
           echo "Verified 16 distinct drawable cover resources."

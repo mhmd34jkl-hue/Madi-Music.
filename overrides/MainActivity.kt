@@ -166,13 +166,16 @@ private fun MadiMusic(
         showIntro = false
     }
     if (showIntro) {
-        MadiIntroScreen()
+        CompositionLocalProvider(LocalTextStyle provides LocalTextStyle.current.copy(fontFamily = appFont)) {
+            MadiIntroScreen()
+        }
     } else {
     var page by remember { mutableIntStateOf(0) }
     var selectedIndex by remember { mutableIntStateOf(0) }
     var playing by remember { mutableStateOf(false) }
     var query by remember { mutableStateOf("") }
     var artistFilter by remember { mutableStateOf("الكل") }
+    var showEqualizer by remember { mutableStateOf(false) }
     val favorites = remember { mutableStateListOf<String>() }
     val tracks = MusicCatalog.tracks
     val current = tracks[selectedIndex]
@@ -247,7 +250,7 @@ private fun MadiMusic(
                     1 -> SearchPage(query, { query = it }, tracks, selectedIndex, favorites, { id -> if (favorites.contains(id)) favorites.remove(id) else favorites.add(id) }, ::play) 
                     2 -> TrackListPage("مكتبتي", "كل أغانيك في مكان واحد", tracks.indices.toList(), tracks, selectedIndex, favorites, { id -> if (favorites.contains(id)) favorites.remove(id) else favorites.add(id) }, ::play)
                     3 -> TrackListPage("الأغاني المفضلة", "الأغاني التي حفظتها بقلبك", tracks.indices.filter { favorites.contains(tracks[it].id) }, tracks, selectedIndex, favorites, { id -> if (favorites.contains(id)) favorites.remove(id) else favorites.add(id) }, ::play)
-                    5 -> NowPlayingPage(current, playing, { page = 0 }, { if (playing) { player?.pause(); playing = false } else { if (player?.currentMediaItem == null) play(selectedIndex) else { player?.play(); playing = true } } }, ::play, selectedIndex, tracks.lastIndex)
+                    5 -> NowPlayingPage(current, playing, { page = 0 }, { if (playing) { player?.pause(); playing = false } else { if (player?.currentMediaItem == null) play(selectedIndex) else { player?.play(); playing = true } } }, ::play, selectedIndex, tracks.lastIndex, { showEqualizer = true })
                     else -> SettingsPage(
                         signedInName, onGoogleLogin, onFacebookLogin, onSignOut
                     )
@@ -309,6 +312,7 @@ private fun MadiMusic(
         }
         }
     }
+    if (showEqualizer) EqualizerDialog(onDismiss = { showEqualizer = false })
     }
 }
 
@@ -465,23 +469,17 @@ private fun HomePage(
 }
 
 @Composable
-private fun NowPlayingPage(track: Track, playing: Boolean, onBack: () -> Unit, onToggle: () -> Unit, onPlayIndex: (Int) -> Unit, selectedIndex: Int, lastIndex: Int) {
+private fun NowPlayingPage(track: Track, playing: Boolean, onBack: () -> Unit, onToggle: () -> Unit, onPlayIndex: (Int) -> Unit, selectedIndex: Int, lastIndex: Int, onEqualizer: () -> Unit) {
     Column(Modifier.fillMaxSize().padding(horizontal = 22.dp), horizontalAlignment = Alignment.CenterHorizontally) {
         Row(Modifier.fillMaxWidth().padding(top = 8.dp, bottom = 18.dp), verticalAlignment = Alignment.CenterVertically) {
             IconButton(onClick = onBack) { Icon(Icons.Default.Home, "رجوع", tint = Color.White) }
             Spacer(Modifier.weight(1f))
             Text("يُشغّل الآن", color = Muted, fontSize = 13.sp, fontWeight = FontWeight.Bold)
             Spacer(Modifier.weight(1f))
-            Icon(Icons.Default.Settings, null, tint = Muted)
+            IconButton(onClick = onEqualizer) { Icon(Icons.Default.Settings, "معادل الصوت", tint = Violet) }
         }
         Spacer(Modifier.height(12.dp))
-        Box(Modifier.fillMaxWidth().aspectRatio(1f).background(Brush.linearGradient(listOf(Color(0xFF8C35C9), Color(0xFF2C1746), Color(0xFF10101A))), RoundedCornerShape(28.dp)), contentAlignment = Alignment.Center) {
-            Box(Modifier.fillMaxSize().padding(18.dp).background(Color(0x22FFFFFF), RoundedCornerShape(22.dp)))
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Text("M", color = Color.White, fontSize = 112.sp, fontWeight = FontWeight.Black)
-                Text("M A D I   M U S I C", color = Color(0xFFE8D5FF), fontSize = 11.sp, fontWeight = FontWeight.Bold)
-            }
-        }
+        TrackArtwork(selectedIndex, Modifier.fillMaxWidth().aspectRatio(1f))
         Spacer(Modifier.height(26.dp))
         Text(track.title, color = Color.White, fontSize = 23.sp, fontWeight = FontWeight.ExtraBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
         Text(track.artist, color = Muted, fontSize = 14.sp)
@@ -501,7 +499,11 @@ private fun NowPlayingPage(track: Track, playing: Boolean, onBack: () -> Unit, o
             }
             IconButton(onClick = { onPlayIndex(if (selectedIndex >= lastIndex) 0 else selectedIndex + 1) }) { Icon(Icons.Default.SkipNext, null, tint = Color.White, modifier = Modifier.size(34.dp)) }
         }
-        Spacer(Modifier.height(20.dp))
+        Spacer(Modifier.height(16.dp))
+        OutlinedButton(onClick = onEqualizer, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(16.dp), colors = ButtonDefaults.outlinedButtonColors(contentColor = Color(0xFFE5CCFF))) {
+            Text("🎚️  معادل الصوت", fontWeight = FontWeight.Bold)
+        }
+        Spacer(Modifier.height(8.dp))
         Text("استمتع بموسيقاك في أي مكان", color = Muted, fontSize = 12.sp)
     }
 }
@@ -568,8 +570,28 @@ private fun TrackListPage(
 }
 
 @Composable
+private fun TrackArtwork(index: Int, modifier: Modifier = Modifier) {
+    val palettes = listOf(
+        listOf(Color(0xFF7B35B7), Color(0xFF21102F)), listOf(Color(0xFF17627A), Color(0xFF101B30)),
+        listOf(Color(0xFFB35B35), Color(0xFF351725)), listOf(Color(0xFF8B3C76), Color(0xFF24152F)),
+        listOf(Color(0xFF395DAD), Color(0xFF121B36)), listOf(Color(0xFF9B762D), Color(0xFF302018)),
+        listOf(Color(0xFF347B62), Color(0xFF102B29)), listOf(Color(0xFF9C3D4E), Color(0xFF321522)),
+        listOf(Color(0xFF6B55B6), Color(0xFF1B1638)), listOf(Color(0xFFB16C37), Color(0xFF301D20)),
+        listOf(Color(0xFF286B8D), Color(0xFF101E32)), listOf(Color(0xFF8A4A9D), Color(0xFF25152E)),
+        listOf(Color(0xFF4F7B9A), Color(0xFF162235)), listOf(Color(0xFFAD476F), Color(0xFF31162A)),
+        listOf(Color(0xFF5A8A50), Color(0xFF182B20)), listOf(Color(0xFFAA7A35), Color(0xFF332018))
+    )
+    val symbols = listOf("✦", "◉", "☾", "♬", "✧", "◆", "❖", "♫", "⬡", "✺", "◈", "✷", "◎", "✹", "△", "✵")
+    val safeIndex = index.coerceIn(0, 15)
+    Box(modifier.background(Brush.linearGradient(palettes[safeIndex]), RoundedCornerShape(16.dp)), contentAlignment = Alignment.Center) {
+        Box(Modifier.fillMaxSize().padding(5.dp).background(Color(0x1FFFFFFF), RoundedCornerShape(13.dp)))
+        Text(symbols[safeIndex], color = Color(0xFFEEDBFF), fontSize = 31.sp, fontWeight = FontWeight.Light)
+        Text("%02d".format(safeIndex + 1), Modifier.align(Alignment.BottomEnd).padding(7.dp), color = Color(0xBFFFFFFF), fontSize = 9.sp, fontWeight = FontWeight.Bold)
+    }
+}
+
+@Composable
 private fun TrackRow(index: Int, track: Track, selected: Int, favorite: Boolean, onPlay: () -> Unit, onFavorite: () -> Unit) {
-    val palettes = listOf(listOf(Color(0xFF5C268B), Color(0xFF21152F)), listOf(Color(0xFF174D67), Color(0xFF14202D)), listOf(Color(0xFF85462B), Color(0xFF2B1A25)), listOf(Color(0xFF67325F), Color(0xFF211629)))
     Row(
         Modifier.fillMaxWidth()
             .background(if (index == selected) Color(0xFF2B1D3B) else Panel, RoundedCornerShape(19.dp))
@@ -577,18 +599,7 @@ private fun TrackRow(index: Int, track: Track, selected: Int, favorite: Boolean,
             .padding(horizontal = 11.dp, vertical = 11.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Box(
-            Modifier.size(57.dp).background(
-                Brush.linearGradient(palettes[index % palettes.size]),
-                RoundedCornerShape(15.dp)
-            ),
-            contentAlignment = Alignment.Center
-        ) {
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Text("M", color = Color.White, fontSize = 24.sp, fontWeight = FontWeight.Black)
-                Text("♫", color = Color(0xFFEAD8FF), fontSize = 10.sp)
-            }
-        }
+        TrackArtwork(index, Modifier.size(57.dp))
         Spacer(Modifier.width(12.dp))
         Column(Modifier.weight(1f)) {
             Text(track.title, color = Color.White, fontWeight = FontWeight.Bold, fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
@@ -613,7 +624,7 @@ private fun SearchField(value: String, onValue: (String) -> Unit, onSearch: () -
         onValueChange = onValue,
         modifier = Modifier.fillMaxWidth(),
         placeholder = { Text("ابحث عن أغنية أو فنان…", color = Muted) },
-        leadingIcon = { Icon(Icons.Default.Search, null, tint = Violet) },
+        leadingIcon = { Text("🔍", fontSize = 20.sp) },
         singleLine = true,
         shape = RoundedCornerShape(16.dp),
         colors = OutlinedTextFieldDefaults.colors(
@@ -633,7 +644,6 @@ private fun SettingsPage(
     onFacebookLogin: () -> Unit,
     onSignOut: () -> Unit
 ) {
-    var showEqualizer by remember { mutableStateOf(false) }
     val context = LocalContext.current
     val version = remember {
         try { context.packageManager.getPackageInfo(context.packageName, 0).versionName ?: "1.1" }
@@ -694,7 +704,6 @@ private fun SettingsPage(
         }
         item {
             SettingsSection("الصوت والتشغيل", "تحكّم في طابع الصوت وتجربة الاستماع") {
-                SettingsRow("♫", "معادل الصوت الاحترافي", "ترددات متعددة وإعدادات صوتية جاهزة", "AUDIO") { showEqualizer = true }
                 SettingsRow("▣", "التشغيل في الخلفية", "تحكّم من الإشعارات وشاشة القفل", null) {
                     Toast.makeText(context, "يمكنك التحكم بالتشغيل من لوحة الإشعارات أثناء تشغيل الموسيقى", Toast.LENGTH_SHORT).show()
                 }
@@ -731,7 +740,6 @@ private fun SettingsPage(
             Text("صُنع بكل شغف على يد شاب ليبي من ضواحي بنغازي  •  M + K = 78 ❤️", Modifier.fillMaxWidth().padding(top = 3.dp), color = Color(0xFF8F829E), fontSize = 9.sp, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
         }
     }
-    if (showEqualizer) EqualizerDialog(onDismiss = { showEqualizer = false })
 }
 
 @Composable

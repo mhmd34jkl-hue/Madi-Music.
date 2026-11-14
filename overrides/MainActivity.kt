@@ -12,6 +12,7 @@ import android.content.Context
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.ui.draw.clip
@@ -42,6 +43,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.font.FontFamily
@@ -246,6 +249,7 @@ private fun MadiMusic(
     // Madi Music typography is fixed: users cannot switch the app font.
     val appFont = FontFamily(Font(R.font.iphone))
     var showIntro by remember { mutableStateOf(true) }
+    var guestMode by remember { mutableStateOf(prefs.getBoolean("guest_mode", false)) }
     LaunchedEffect(Unit) {
         delay(2800)
         showIntro = false
@@ -253,6 +257,20 @@ private fun MadiMusic(
     if (showIntro) {
         CompositionLocalProvider(LocalTextStyle provides LocalTextStyle.current.copy(fontFamily = appFont)) {
             MadiIntroScreen()
+        }
+    } else if (signedInName == null && !guestMode) {
+        CompositionLocalProvider(LocalTextStyle provides LocalTextStyle.current.copy(fontFamily = appFont)) {
+            MadiAuthScreen(
+                onGoogleLogin = onGoogleLogin,
+                onFacebookLogin = onFacebookLogin,
+                onEmailLogin = onEmailLogin,
+                onCreateAccount = onCreateAccount,
+                onPasswordReset = onPasswordReset,
+                onGuest = {
+                    guestMode = true
+                    prefs.edit().putBoolean("guest_mode", true).apply()
+                }
+            )
         }
     } else {
     var page by remember { mutableIntStateOf(0) }
@@ -337,7 +355,7 @@ private fun MadiMusic(
                     3 -> TrackListPage("الأغاني المفضلة", "الأغاني التي حفظتها بقلبك", tracks.indices.filter { favorites.contains(tracks[it].id) }, tracks, selectedIndex, favorites, { id -> if (favorites.contains(id)) favorites.remove(id) else favorites.add(id) }, ::play)
                     5 -> NowPlayingPage(current, playing, { page = 0 }, { if (playing) { player?.pause(); playing = false } else { if (player?.currentMediaItem == null) play(selectedIndex) else { player?.play(); playing = true } } }, ::play, selectedIndex, tracks.lastIndex, { showEqualizer = true })
                     else -> SettingsPage(
-                        signedInName, onGoogleLogin, onFacebookLogin, onSignOut,
+                        signedInName, onGoogleLogin, onFacebookLogin, { onSignOut(); guestMode = false; prefs.edit().putBoolean("guest_mode", false).apply() },
                         onEmailLogin, onCreateAccount, onPasswordReset
                     )
                 }
@@ -400,6 +418,108 @@ private fun MadiMusic(
         }
     }
 }
+}
+
+@Composable
+private fun MadiAuthScreen(
+    onGoogleLogin: () -> Unit,
+    onFacebookLogin: () -> Unit,
+    onEmailLogin: (String, String) -> Unit,
+    onCreateAccount: (String, String) -> Unit,
+    onPasswordReset: (String) -> Unit,
+    onGuest: () -> Unit
+) {
+    var email by remember { mutableStateOf("") }
+    var password by remember { mutableStateOf("") }
+    var showCreate by remember { mutableStateOf(false) }
+    var showReset by remember { mutableStateOf(false) }
+    Box(
+        Modifier.fillMaxSize().background(
+            Brush.radialGradient(listOf(Color(0xFF382052), Color(0xFF120C1D), Color(0xFF050509)), radius = 1050f)
+        ).statusBarsPadding().navigationBarsPadding()
+    ) {
+        TextButton(onClick = onGuest, modifier = Modifier.align(Alignment.TopEnd).padding(14.dp)) {
+            Text("تخطي", color = Color(0xFFE1C5FF), fontWeight = FontWeight.Bold)
+        }
+        Column(
+            Modifier.align(Alignment.Center).fillMaxWidth().padding(horizontal = 24.dp)
+                .verticalScroll(rememberScrollState()),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Box(
+                Modifier.size(106.dp).background(
+                    Brush.linearGradient(listOf(Violet, Color(0xFF49236D), Color(0xFF17101F))),
+                    RoundedCornerShape(30.dp)
+                ),
+                contentAlignment = Alignment.Center
+            ) {
+                Text("M", color = Color.White, fontSize = 72.sp, fontWeight = FontWeight.Black)
+                Text("♛", Modifier.align(Alignment.TopCenter).offset(y = (-12).dp), color = Color(0xFFE7D9F5), fontSize = 27.sp)
+            }
+            Spacer(Modifier.height(22.dp))
+            Text("أهلاً بك في MADI MUSIC", color = Color.White, fontSize = 24.sp, fontWeight = FontWeight.Black)
+            Text("سجّل دخولك لتبدأ تجربتك الموسيقية", color = Muted, fontSize = 12.sp)
+            Spacer(Modifier.height(24.dp))
+            OutlinedTextField(
+                value = email, onValueChange = { email = it }, modifier = Modifier.fillMaxWidth(),
+                singleLine = true, label = { Text("البريد الإلكتروني") },
+                keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Email),
+                shape = RoundedCornerShape(15.dp),
+                colors = OutlinedTextFieldDefaults.colors(focusedTextColor = Color.White, unfocusedTextColor = Color.White, focusedBorderColor = Violet, unfocusedBorderColor = Color(0xFF49365D), focusedLabelColor = Violet, unfocusedLabelColor = Muted, cursorColor = Violet)
+            )
+            Spacer(Modifier.height(9.dp))
+            OutlinedTextField(
+                value = password, onValueChange = { password = it }, modifier = Modifier.fillMaxWidth(),
+                singleLine = true, label = { Text("كلمة المرور") },
+                visualTransformation = androidx.compose.ui.text.input.PasswordVisualTransformation(),
+                keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Password),
+                shape = RoundedCornerShape(15.dp),
+                colors = OutlinedTextFieldDefaults.colors(focusedTextColor = Color.White, unfocusedTextColor = Color.White, focusedBorderColor = Violet, unfocusedBorderColor = Color(0xFF49365D), focusedLabelColor = Violet, unfocusedLabelColor = Muted, cursorColor = Violet)
+            )
+            Spacer(Modifier.height(13.dp))
+            Button(onClick = { onEmailLogin(email, password) }, modifier = Modifier.fillMaxWidth(), colors = ButtonDefaults.buttonColors(containerColor = Violet), shape = RoundedCornerShape(15.dp)) {
+                Text("تسجيل الدخول", fontWeight = FontWeight.Bold)
+            }
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                TextButton(onClick = { showCreate = true }) { Text("إنشاء حساب", color = Color(0xFFD8B5FF)) }
+                TextButton(onClick = { showReset = true }) { Text("نسيت كلمة المرور؟", color = Color(0xFFD8B5FF)) }
+            }
+            OutlinedButton(onClick = onGoogleLogin, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(15.dp), colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.White)) {
+                Text("G   المتابعة باستخدام Google", fontWeight = FontWeight.Bold)
+            }
+            Spacer(Modifier.height(8.dp))
+            OutlinedButton(onClick = onFacebookLogin, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(15.dp), colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.White)) {
+                Text("f   المتابعة باستخدام Facebook", fontWeight = FontWeight.Bold)
+            }
+            Spacer(Modifier.height(14.dp))
+            Text("يمكنك المتابعة كضيف والاستماع دون إنترنت", color = Muted, fontSize = 10.sp)
+        }
+    }
+    if (showCreate) {
+        AlertDialog(
+            onDismissRequest = { showCreate = false },
+            title = { Text("إنشاء حساب جديد", color = Color.White) },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    OutlinedTextField(email, { email = it }, label = { Text("البريد الإلكتروني") }, singleLine = true)
+                    OutlinedTextField(password, { password = it }, label = { Text("كلمة المرور") }, singleLine = true, visualTransformation = androidx.compose.ui.text.input.PasswordVisualTransformation())
+                }
+            },
+            confirmButton = { TextButton(onClick = { onCreateAccount(email, password); showCreate = false }) { Text("إنشاء", color = Violet) } },
+            dismissButton = { TextButton(onClick = { showCreate = false }) { Text("إلغاء", color = Muted) } },
+            containerColor = Panel
+        )
+    }
+    if (showReset) {
+        AlertDialog(
+            onDismissRequest = { showReset = false },
+            title = { Text("استعادة كلمة المرور", color = Color.White) },
+            text = { OutlinedTextField(email, { email = it }, label = { Text("البريد الإلكتروني") }, singleLine = true) },
+            confirmButton = { TextButton(onClick = { onPasswordReset(email); showReset = false }) { Text("إرسال الرابط", color = Violet) } },
+            dismissButton = { TextButton(onClick = { showReset = false }) { Text("إلغاء", color = Muted) } },
+            containerColor = Panel
+        )
+    }
 }
 
 @Composable
@@ -668,10 +788,23 @@ private fun TrackArtwork(index: Int, modifier: Modifier = Modifier) {
     )
     val symbols = listOf("✦", "◉", "☾", "♬", "✧", "◆", "❖", "♫", "⬡", "✺", "◈", "✷", "◎", "✹", "△", "✵")
     val safeIndex = index.coerceIn(0, 15)
-    Box(modifier.background(Brush.linearGradient(palettes[safeIndex]), RoundedCornerShape(16.dp)), contentAlignment = Alignment.Center) {
-        Box(Modifier.fillMaxSize().padding(5.dp).background(Color(0x1FFFFFFF), RoundedCornerShape(13.dp)))
-        Text(symbols[safeIndex], color = Color(0xFFEEDBFF), fontSize = 31.sp, fontWeight = FontWeight.Light)
-        Text("%02d".format(safeIndex + 1), Modifier.align(Alignment.BottomEnd).padding(7.dp), color = Color(0xBFFFFFFF), fontSize = 9.sp, fontWeight = FontWeight.Bold)
+    val context = LocalContext.current
+    val coverId = remember(safeIndex) {
+        context.resources.getIdentifier("cover_%03d".format(safeIndex + 1), "drawable", context.packageName)
+    }
+    if (coverId != 0) {
+        Image(
+            painter = painterResource(coverId),
+            contentDescription = "غلاف " + MusicCatalog.tracks[safeIndex].title,
+            modifier = modifier.clip(RoundedCornerShape(16.dp)),
+            contentScale = ContentScale.Crop
+        )
+    } else {
+        Box(modifier.background(Brush.linearGradient(palettes[safeIndex]), RoundedCornerShape(16.dp)), contentAlignment = Alignment.Center) {
+            Box(Modifier.fillMaxSize().padding(5.dp).background(Color(0x1FFFFFFF), RoundedCornerShape(13.dp)))
+            Text(symbols[safeIndex], color = Color(0xFFEEDBFF), fontSize = 31.sp, fontWeight = FontWeight.Light)
+            Text("%02d".format(safeIndex + 1), Modifier.align(Alignment.BottomEnd).padding(7.dp), color = Color(0xBFFFFFFF), fontSize = 9.sp, fontWeight = FontWeight.Bold)
+        }
     }
 }
 

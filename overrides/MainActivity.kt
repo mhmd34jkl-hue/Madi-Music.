@@ -12,6 +12,9 @@ import android.content.Context
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.compose.foundation.Image
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.ui.draw.clip
@@ -668,10 +671,24 @@ private fun TrackArtwork(index: Int, modifier: Modifier = Modifier) {
     )
     val symbols = listOf("✦", "◉", "☾", "♬", "✧", "◆", "❖", "♫", "⬡", "✺", "◈", "✷", "◎", "✹", "△", "✵")
     val safeIndex = index.coerceIn(0, 15)
-    Box(modifier.background(Brush.linearGradient(palettes[safeIndex]), RoundedCornerShape(16.dp)), contentAlignment = Alignment.Center) {
-        Box(Modifier.fillMaxSize().padding(5.dp).background(Color(0x1FFFFFFF), RoundedCornerShape(13.dp)))
-        Text(symbols[safeIndex], color = Color(0xFFEEDBFF), fontSize = 31.sp, fontWeight = FontWeight.Light)
-        Text("%02d".format(safeIndex + 1), Modifier.align(Alignment.BottomEnd).padding(7.dp), color = Color(0xBFFFFFFF), fontSize = 9.sp, fontWeight = FontWeight.Bold)
+    val context = LocalContext.current
+    val coverName = MusicCatalog.tracks.getOrNull(safeIndex)?.coverResourceName.orEmpty()
+    val coverId = remember(coverName) {
+        context.resources.getIdentifier(coverName, "drawable", context.packageName)
+    }
+    if (coverId != 0) {
+        Image(
+            painter = painterResource(id = coverId),
+            contentDescription = MusicCatalog.tracks[safeIndex].title,
+            modifier = modifier.clip(RoundedCornerShape(16.dp)),
+            contentScale = ContentScale.Crop
+        )
+    } else {
+        Box(modifier.background(Brush.linearGradient(palettes[safeIndex]), RoundedCornerShape(16.dp)), contentAlignment = Alignment.Center) {
+            Box(Modifier.fillMaxSize().padding(5.dp).background(Color(0x1FFFFFFF), RoundedCornerShape(13.dp)))
+            Text(symbols[safeIndex], color = Color(0xFFEEDBFF), fontSize = 31.sp, fontWeight = FontWeight.Light)
+            Text("%02d".format(safeIndex + 1), Modifier.align(Alignment.BottomEnd).padding(7.dp), color = Color(0xBFFFFFFF), fontSize = 9.sp, fontWeight = FontWeight.Bold)
+        }
     }
 }
 

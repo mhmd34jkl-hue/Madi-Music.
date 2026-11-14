@@ -158,12 +158,8 @@ private fun MadiMusic(
 ) {
     val context = LocalContext.current
     val prefs = remember(context) { context.getSharedPreferences("madi_music_preferences", Context.MODE_PRIVATE) }
-    var fontChoice by remember { mutableStateOf(prefs.getString("font_choice", "ios") ?: "ios") }
-    val appFont = when (fontChoice) {
-        "system" -> FontFamily.SansSerif
-        "serif" -> FontFamily.Serif
-        else -> FontFamily(Font(R.font.inter))
-    }
+    // Madi Music typography is fixed: users cannot switch the app font.
+    val appFont = FontFamily(Font(R.font.inter))
     var showIntro by remember { mutableStateOf(true) }
     LaunchedEffect(Unit) {
         delay(2800)
@@ -253,11 +249,7 @@ private fun MadiMusic(
                     3 -> TrackListPage("الأغاني المفضلة", "الأغاني التي حفظتها بقلبك", tracks.indices.filter { favorites.contains(tracks[it].id) }, tracks, selectedIndex, favorites, { id -> if (favorites.contains(id)) favorites.remove(id) else favorites.add(id) }, ::play)
                     5 -> NowPlayingPage(current, playing, { page = 0 }, { if (playing) { player?.pause(); playing = false } else { if (player?.currentMediaItem == null) play(selectedIndex) else { player?.play(); playing = true } } }, ::play, selectedIndex, tracks.lastIndex)
                     else -> SettingsPage(
-                        signedInName, onGoogleLogin, onFacebookLogin, onSignOut,
-                        fontChoice, {
-                            fontChoice = it
-                            prefs.edit().putString("font_choice", it).apply()
-                        }
+                        signedInName, onGoogleLogin, onFacebookLogin, onSignOut
                     )
                 }
             }
@@ -598,12 +590,9 @@ private fun SettingsPage(
     signedInName: String?,
     onGoogleLogin: () -> Unit,
     onFacebookLogin: () -> Unit,
-    onSignOut: () -> Unit,
-    fontChoice: String,
-    onFontChoice: (String) -> Unit
+    onSignOut: () -> Unit
 ) {
     var showEqualizer by remember { mutableStateOf(false) }
-    var showFonts by remember { mutableStateOf(false) }
     val context = LocalContext.current
     val version = remember {
         try { context.packageManager.getPackageInfo(context.packageName, 0).versionName ?: "1.1" }
@@ -653,7 +642,9 @@ private fun SettingsPage(
             }
             item {
                 SettingsSection("التخصيص", "مظهر أنيق يناسب ذوقك") {
-                    SettingsRow("Aa", "الخط الأساسي", "Inter — قريب من أسلوب خطوط iPhone", null) { showFonts = true }
+                    SettingsRow("Aa", "الخط المعتمد", "خط Madi Music ثابت في جميع الشاشات", null) {
+                        Toast.makeText(context, "خط Madi Music موحّد ولا يمكن تغييره من داخل التطبيق", Toast.LENGTH_SHORT).show()
+                    }
                     SettingsRow("文", "اللغة", "العربية والإنجليزية", null) {
                         Toast.makeText(context, "الواجهة العربية مفعّلة حالياً", Toast.LENGTH_SHORT).show()
                     }
@@ -688,21 +679,6 @@ private fun SettingsPage(
     }
 
     if (showEqualizer) EqualizerDialog(onDismiss = { showEqualizer = false })
-    if (showFonts) {
-        AlertDialog(
-            onDismissRequest = { showFonts = false },
-            containerColor = Color(0xFF21172E),
-            title = { Text("اختيار الخط", color = Color.White, fontWeight = FontWeight.Bold) },
-            text = {
-                Column {
-                    TextButton(onClick = { onFontChoice("ios"); showFonts = false }) { Text("Inter — أسلوب قريب من iPhone", color = Color.White) }
-                    TextButton(onClick = { onFontChoice("system"); showFonts = false }) { Text("خط النظام", color = Color.White) }
-                    TextButton(onClick = { onFontChoice("serif"); showFonts = false }) { Text("خط Serif", color = Color.White) }
-                }
-            },
-            confirmButton = { TextButton(onClick = { showFonts = false }) { Text("إغلاق", color = Violet) } }
-        )
-    }
 }
 
 @Composable

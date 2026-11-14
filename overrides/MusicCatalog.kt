@@ -4,7 +4,7 @@ import android.net.Uri
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MediaMetadata
 
-data class Track(val id: String, val title: String, val artist: String)
+data class Track(val id: String, val title: String, val artist: String, val artworkName: String = "cover_${id}")
 
 object MusicCatalog {
     val tracks = listOf(
@@ -27,7 +27,7 @@ object MusicCatalog {
     )
 
     fun mediaItems(): List<MediaItem> = tracks.map { track ->
-        val artwork = Uri.parse("android.resource://com.madi.music/drawable/madi_launcher")
+        val artwork = Uri.parse("android.resource://com.madi.music/drawable/${track.artworkName}")
         MediaItem.Builder()
             .setMediaId(track.id)
             .setUri(Uri.parse("asset:///music/${track.id}.mp3"))

@@ -235,16 +235,17 @@ jobs:
         run: |
           set -euo pipefail
           sudo apt-get update
-          sudo apt-get install -y imagemagick
+          sudo apt-get install -y librsvg2-bin
           PROJECT="$PROJECT_DIR"
           RES="$PROJECT/app/src/main/res"
           mkdir -p "$RES/drawable" "$RES/mipmap-anydpi-v26"
-          convert -background none assets/madi-launcher.svg -resize 512x512 "$RES/drawable/madi_launcher.png"
+          # Render SVG with librsvg so gradients, filters, crown and headphone paths are preserved.
+          rsvg-convert -w 512 -h 512 assets/madi-launcher.svg -o "$RES/drawable/madi_launcher.png"
           for spec in "mdpi:48" "hdpi:72" "xhdpi:96" "xxhdpi:144" "xxxhdpi:192"; do
             density="${spec%%:*}"
             pixels="${spec##*:}"
             mkdir -p "$RES/mipmap-$density"
-            convert "$RES/drawable/madi_launcher.png" -resize "${pixels}x${pixels}" "$RES/mipmap-$density/ic_launcher.png"
+            rsvg-convert -w "$pixels" -h "$pixels" assets/madi-launcher.svg -o "$RES/mipmap-$density/ic_launcher.png"
             cp "$RES/mipmap-$density/ic_launcher.png" "$RES/mipmap-$density/ic_launcher_round.png"
           done
           cat > "$RES/mipmap-anydpi-v26/ic_launcher.xml" <<'XML'

@@ -12,6 +12,13 @@
 <rect x="29" y="29" width="454" height="454" rx="88" fill="none" stroke="#fff" stroke-opacity=".15" stroke-width="2"/>
 <circle cx="256" cy="264" r="177" fill="none" stroke="#9f38f4" stroke-opacity=".22" stroke-width="2"/>
 <circle cx="256" cy="264" r="160" fill="none" stroke="#d4a1ff" stroke-opacity=".16" stroke-width="1.5" stroke-dasharray="3 12"/>
+<!-- Premium headphone silhouette around the crowned M -->
+<path d="M137 278 C137 194 184 145 256 145 C328 145 375 194 375 278" fill="none" stroke="url(#silver)" stroke-width="17" stroke-linecap="round" opacity=".95"/>
+<path d="M137 278 C137 194 184 145 256 145 C328 145 375 194 375 278" fill="none" stroke="#a43cff" stroke-width="5" stroke-linecap="round" opacity=".8"/>
+<rect x="105" y="244" width="43" height="105" rx="19" fill="url(#silver)" stroke="#fff" stroke-width="3"/>
+<rect x="364" y="244" width="43" height="105" rx="19" fill="url(#silver)" stroke="#fff" stroke-width="3"/>
+<rect x="115" y="258" width="23" height="76" rx="10" fill="url(#violet)"/>
+<rect x="374" y="258" width="23" height="76" rx="10" fill="url(#violet)"/>
 <path d="M169 127 L153 67 L218 102 L256 40 L294 102 L359 67 L343 127 Q256 160 169 127Z" fill="url(#silver)" stroke="#fff" stroke-width="4" stroke-linejoin="round"/>
 <path d="M170 127 Q256 153 342 127" fill="none" stroke="url(#violet)" stroke-width="9" stroke-linecap="round"/>
 <path d="M256 54 L267 76 L256 91 L245 76Z" fill="url(#violet)" stroke="#fff" stroke-width="3"/>

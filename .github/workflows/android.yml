@@ -218,10 +218,11 @@ jobs:
           import pathlib, re, sys
           p=pathlib.Path(sys.argv[1])
           s=p.read_text()
-          app_match=re.search(r'<application\\b[^>]*>', s)
-          if not app_match: raise SystemExit('AndroidManifest.xml has no application element')
+          app_match=re.search(r'<application\b[^>]*>', s)
+          if not app_match:
+              raise SystemExit('AndroidManifest.xml has no application element')
           tag=app_match.group(0)
-          tag=re.sub(r'\\s+android:(?:icon|roundIcon)="[^"]*"', '', tag)
+          tag=re.sub(r'\s+android:(?:icon|roundIcon)="[^"]*"', '', tag)
           tag=tag[:-1] + ' android:icon="@mipmap/ic_launcher" android:roundIcon="@mipmap/ic_launcher_round">'
           s=s[:app_match.start()]+tag+s[app_match.end():]
           permissions=[
@@ -232,18 +233,20 @@ jobs:
           ]
           for permission in permissions:
               if permission not in s:
-                  s=re.sub(r'(<application\\b)', f'<uses-permission android:name="{permission}" />\\n    \\1', s, count=1)
-          service_match=re.search(r'<service\\b[^>]*android:name="[^"]*MusicPlaybackService"[^>]*>', s)
+                  s=s.replace('<application', f'<uses-permission android:name="{permission}" />\n    <application', 1)
+          service_match=re.search(r'<service\b[^>]*android:name="[^"]*MusicPlaybackService"[^>]*>', s)
           if service_match:
               st=service_match.group(0)
-              if 'android:exported=' not in st: st=st[:-1]+' android:exported="true">'
-              if 'android:foregroundServiceType=' not in st: st=st[:-1]+' android:foregroundServiceType="mediaPlayback">'
+              if 'android:exported=' not in st:
+                  st=st[:-1]+' android:exported="true">'
+              if 'android:foregroundServiceType=' not in st:
+                  st=st[:-1]+' android:foregroundServiceType="mediaPlayback">'
               s=s[:service_match.start()]+st+s[service_match.end():]
-          else:
-              service='''<service android:name=".MusicPlaybackService" android:exported="true" android:foregroundServiceType="mediaPlayback"><intent-filter><action android:name="androidx.media3.session.MediaSessionService" /></intent-filter></service>'''
-              s=s.replace('</application>', service+'\\n</application>', 1)
+          elif 'androidx.media3.session.MediaSessionService' not in s:
+              service='<service android:name=".MusicPlaybackService" android:exported="true" android:foregroundServiceType="mediaPlayback"><intent-filter><action android:name="androidx.media3.session.MediaSessionService" /></intent-filter></service>'
+              s=s.replace('</application>', service+'\n</application>', 1)
           if 'androidx.media3.session.MediaSessionService' not in s:
-              s=s.replace('</application>', '<service android:name=".MusicPlaybackService" android:exported="true" android:foregroundServiceType="mediaPlayback"><intent-filter><action android:name="androidx.media3.session.MediaSessionService" /></intent-filter></service>\\n</application>', 1)
+              s=s.replace('</application>', '<service android:name=".MusicPlaybackService" android:exported="true" android:foregroundServiceType="mediaPlayback"><intent-filter><action android:name="androidx.media3.session.MediaSessionService" /></intent-filter></service>\n</application>', 1)
           p.write_text(s)
           print('Manifest permissions, MediaSessionService and adaptive icon verified')
           PY

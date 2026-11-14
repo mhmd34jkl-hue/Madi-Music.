@@ -310,9 +310,8 @@ private fun MadiMusic(
                 }
             }
         }
+        if (showEqualizer) EqualizerDialog(onDismiss = { showEqualizer = false })
         }
-    }
-    if (showEqualizer) EqualizerDialog(onDismiss = { showEqualizer = false })
     }
 }
 

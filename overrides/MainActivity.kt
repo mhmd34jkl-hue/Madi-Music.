@@ -4,6 +4,9 @@ import android.content.ComponentName
 import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
+import android.app.Activity
+import android.content.Context
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.background
@@ -32,6 +35,9 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.Font
+import androidx.compose.material3.LocalTextStyle
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -40,6 +46,12 @@ import androidx.media3.common.Player
 import androidx.media3.session.MediaController
 import androidx.media3.session.SessionToken
 import com.google.common.util.concurrent.ListenableFuture
+import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.auth.GoogleAuthProvider
+import com.google.firebase.auth.OAuthProvider
+import com.google.android.gms.auth.api.signin.GoogleSignIn
+import com.google.android.gms.auth.api.signin.GoogleSignInOptions
+import com.google.android.gms.common.api.ApiException
 
 private val Night = Color(0xFF07070D)
 private val Panel = Color(0xFF11111B)
@@ -50,14 +62,72 @@ private val SupportNumber = "218947088407"
 
 class MainActivity : ComponentActivity() {
     private var controller by mutableStateOf<MediaController?>(null)
+    private var signedInName by mutableStateOf(FirebaseAuth.getInstance().currentUser?.displayName ?: FirebaseAuth.getInstance().currentUser?.email)
     private lateinit var controllerFuture: ListenableFuture<MediaController>
+    private val auth: FirebaseAuth by lazy { FirebaseAuth.getInstance() }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContent { MadiMusic(controller) }
+        setContent {
+            MadiMusic(controller, signedInName, ::startGoogleLogin, ::startFacebookLogin, ::signOut)
+        }
         val token = SessionToken(this, ComponentName(this, MusicPlaybackService::class.java))
         controllerFuture = MediaController.Builder(this, token).buildAsync()
-        controllerFuture.addListener({ controller = controllerFuture.get() }, mainExecutor)
+        controllerFuture.addListener({ runCatching { controller = controllerFuture.get() } }, mainExecutor)
+    }
+
+    private fun startGoogleLogin() {
+        runCatching {
+            val options = GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
+                .requestIdToken(getString(R.string.default_web_client_id)).requestEmail().build()
+            startActivityForResult(GoogleSignIn.getClient(this, options).signInIntent, 7101)
+        }.onFailure {
+            Toast.makeText(this, "تعذر بدء تسجيل Google. تحقق من إعداد Firebase.", Toast.LENGTH_LONG).show()
+        }
+    }
+
+    private fun startFacebookLogin() {
+        val provider = OAuthProvider.newBuilder("facebook.com")
+        provider.addCustomParameter("display", "popup")
+        auth.startActivityForSignInWithProvider(this, provider.build())
+            .addOnSuccessListener { result ->
+                signedInName = result.user?.displayName ?: result.user?.email ?: "حساب متصل"
+                Toast.makeText(this, "تم تسجيل الدخول بنجاح", Toast.LENGTH_SHORT).show()
+            }
+            .addOnFailureListener { error ->
+                Toast.makeText(this, "تعذر تسجيل Facebook: ${error.localizedMessage ?: "حاول مرة أخرى"}", Toast.LENGTH_LONG).show()
+            }
+    }
+
+    @Deprecated("Deprecated by Android, retained for Google Sign-In compatibility")
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
+        if (requestCode == 7101 && resultCode == Activity.RESULT_OK) {
+            runCatching {
+                GoogleSignIn.getSignedInAccountFromIntent(data).getResult(ApiException::class.java)
+            }.onSuccess { account ->
+                val credential = GoogleAuthProvider.getCredential(account.idToken, null)
+                auth.signInWithCredential(credential)
+                    .addOnSuccessListener { result ->
+                        signedInName = result.user?.displayName ?: result.user?.email ?: "حساب متصل"
+                        Toast.makeText(this, "تم تسجيل الدخول عبر Google", Toast.LENGTH_SHORT).show()
+                    }
+                    .addOnFailureListener {
+                        Toast.makeText(this, "تعذر إكمال تسجيل Google", Toast.LENGTH_LONG).show()
+                    }
+            }.onFailure {
+                Toast.makeText(this, "لم يكتمل تسجيل Google", Toast.LENGTH_LONG).show()
+            }
+        }
+    }
+
+    private fun signOut() {
+        auth.signOut()
+        val options = GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
+            .requestIdToken(getString(R.string.default_web_client_id)).requestEmail().build()
+        GoogleSignIn.getClient(this, options).signOut()
+        signedInName = null
+        Toast.makeText(this, "تم تسجيل الخروج", Toast.LENGTH_SHORT).show()
     }
 
     override fun onDestroy() {
@@ -68,7 +138,22 @@ class MainActivity : ComponentActivity() {
 }
 
 @Composable
-private fun MadiMusic(player: Player?) {
+private fun MadiMusic(
+    player: Player?,
+    signedInName: String?,
+    onGoogleLogin: () -> Unit,
+    onFacebookLogin: () -> Unit,
+    onSignOut: () -> Unit
+) {
+    val context = LocalContext.current
+    val prefs = remember(context) { context.getSharedPreferences("madi_music_preferences", Context.MODE_PRIVATE) }
+    var fontChoice by remember { mutableStateOf(prefs.getString("font_choice", "ios") ?: "ios") }
+    val appFont = when (fontChoice) {
+        "system" -> FontFamily.SansSerif
+        "serif" -> FontFamily.Serif
+        else -> FontFamily(Font(R.font.inter))
+    }
+    CompositionLocalProvider(LocalTextStyle provides LocalTextStyle.current.copy(fontFamily = appFont)) {
     var showIntro by remember { mutableStateOf(true) }
     LaunchedEffect(Unit) {
         delay(2800)
@@ -88,12 +173,25 @@ private fun MadiMusic(player: Player?) {
     val current = tracks[selectedIndex]
     val artists = listOf("الكل") + tracks.map { it.artist }.distinct()
 
+    DisposableEffect(player) {
+        val listener = object : Player.Listener {
+            override fun onMediaItemTransition(mediaItem: androidx.media3.common.MediaItem?, reason: Int) {
+                val newIndex = tracks.indexOfFirst { it.id == mediaItem?.mediaId }
+                if (newIndex >= 0) selectedIndex = newIndex
+            }
+            override fun onIsPlayingChanged(isPlaying: Boolean) { playing = isPlaying }
+        }
+        player?.addListener(listener)
+        onDispose { player?.removeListener(listener) }
+    }
+
     fun play(index: Int) {
-        selectedIndex = index.coerceIn(0, tracks.lastIndex)
-        player?.setMediaItem(MusicCatalog.mediaItems()[selectedIndex])
+        val safeIndex = index.coerceIn(0, tracks.lastIndex)
+        selectedIndex = safeIndex
+        player?.setMediaItems(MusicCatalog.mediaItems(), safeIndex, 0L)
         player?.prepare()
         player?.play()
-        playing = true
+        playing = player != null
     }
 
     MaterialTheme(colorScheme = darkColorScheme(
@@ -144,7 +242,13 @@ private fun MadiMusic(player: Player?) {
                     2 -> TrackListPage("مكتبتي", "كل أغانيك في مكان واحد", tracks.indices.toList(), tracks, selectedIndex, favorites, { id -> if (favorites.contains(id)) favorites.remove(id) else favorites.add(id) }, ::play)
                     3 -> TrackListPage("الأغاني المفضلة", "الأغاني التي حفظتها بقلبك", tracks.indices.filter { favorites.contains(tracks[it].id) }, tracks, selectedIndex, favorites, { id -> if (favorites.contains(id)) favorites.remove(id) else favorites.add(id) }, ::play)
                     5 -> NowPlayingPage(current, playing, { page = 0 }, { if (playing) { player?.pause(); playing = false } else { if (player?.currentMediaItem == null) play(selectedIndex) else { player?.play(); playing = true } } }, ::play, selectedIndex, tracks.lastIndex)
-                    else -> SettingsPage()
+                    else -> SettingsPage(
+                        signedInName, onGoogleLogin, onFacebookLogin, onSignOut,
+                        fontChoice, {
+                            fontChoice = it
+                            prefs.edit().putString("font_choice", it).apply()
+                        }
+                    )
                 }
             }
 
@@ -201,6 +305,7 @@ private fun MadiMusic(player: Player?) {
                 }
             }
         }
+    }
     }
 }
 

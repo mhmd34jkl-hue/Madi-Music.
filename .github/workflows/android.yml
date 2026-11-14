@@ -2,7 +2,7 @@ name: Build Madi Music APK
 
 on:
   push:
-    branches: [madi-ui-upgrade, feature/firebase-auth]
+    branches: [madi-ui-upgrade, feature/firebase-auth, feature/madi-covers-20261115]
   workflow_dispatch:
   release:
     types: [published]
@@ -218,6 +218,77 @@ jobs:
           done
           test "$(find "$MUSIC" -maxdepth 1 -type f -name '*.mp3' | wc -l)" -eq 16
 
+
+      - name: Extract the user's 16 song covers, new app icon and login reference
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -s "New Folder.zip" || { echo 'New Folder.zip is missing from repository root'; exit 1; }
+          python3 -m pip install --user Pillow
+          python3 - "$PROJECT_DIR" <<'PY'
+          import pathlib, sys, zipfile, re, unicodedata
+          from PIL import Image
+          root = pathlib.Path(sys.argv[1])
+          res = root / "app/src/main/res"
+          covers = res / "drawable-nodpi"
+          covers.mkdir(parents=True, exist_ok=True)
+          def norm(s):
+              s = unicodedata.normalize("NFKD", pathlib.PurePosixPath(s).stem).casefold()
+              return "".join(ch for ch in s if ch.isalnum())
+          members = []
+          with zipfile.ZipFile("New Folder.zip") as z:
+              for info in z.infolist():
+                  if info.is_dir(): continue
+                  ext = pathlib.PurePosixPath(info.filename).suffix.casefold()
+                  if ext in (".jpg", ".jpeg", ".png", ".webp"):
+                      members.append((info, norm(info.filename), pathlib.PurePosixPath(info.filename).name))
+              specs = [
+                ("cover_jak_el_marsoul", ["chebakiljakelmarsoul"]),
+                ("cover_histoire_kdima", ["histoirekdimajdiiid"]),
+                ("cover_el_3achk_mamnou3", ["el3achkmamnou3"]),
+                ("cover_balaki", ["balaki"]),
+                ("cover_roho_gouloulha", ["chebmomo2022rohogouloulha"]),
+                ("cover_dikrayat", ["dikrayat"]),
+                ("cover_atiteha_lamour", ["atitehalamur", "atitehalamour"]),
+                ("cover_kuala_lumpur", ["kualalumpur"]),
+                ("cover_larya", ["larya"]),
+                ("cover_dam3a", ["دمعه", "دمعة"]),
+                ("cover_yadoum_alayhom", ["يدومعليهمفرحكبير"]),
+                ("cover_nahna_wahed", ["مشاثنينونحنواحد"]),
+                ("cover_manawati_shani", ["مانواطيشاني"]),
+                ("cover_baba_noel", ["تراكبابانويلتسريبكامل"]),
+                ("cover_oyouni", ["عيوني"]),
+                ("cover_nadhra", ["نظره", "نظرة"]),
+              ]
+              for target, aliases in specs:
+                  found = [(info, name) for info, key, name in members if key in aliases]
+                  if not found:
+                      raise SystemExit("Missing exact cover for " + target + "; searched " + repr(aliases))
+                  # Deterministic single source; duplicate Balaki artwork is intentionally copied once.
+                  info, original = sorted(found, key=lambda x: x[1].casefold())[0]
+                  ext = pathlib.PurePosixPath(original).suffix.casefold()
+                  out = covers / (target + (".jpg" if ext in (".jpg", ".jpeg") else ext))
+                  with z.open(info) as src, out.open("wb") as dst:
+                      dst.write(src.read())
+                  print("COVER", target, "<-", info.filename, "=>", out.name)
+              def find_named(wanted):
+                  hits = [(i,n) for i,k,n in members if k == wanted]
+                  if not hits:
+                      hits = [(i,n) for i,k,n in members if k.startswith(wanted)]
+                  if not hits: raise SystemExit("Missing ZIP image asset: " + wanted)
+                  return sorted(hits, key=lambda x:x[1].casefold())[0]
+              for wanted, output in [("icon", "madi_user_icon.png"), ("loginscreen", "login_screen_reference.png")]:
+                  info, original = find_named(wanted)
+                  dest = covers / output
+                  with z.open(info) as src:
+                      import io
+                      im = Image.open(io.BytesIO(src.read())).convert("RGBA")
+                      im.save(dest, format="PNG")
+                  print("DESIGN ASSET", wanted, "<-", info.filename, "=>", output, "size", Image.open(dest).size)
+          PY
+          test "$(find "$PROJECT_DIR/app/src/main/res/drawable-nodpi" -maxdepth 1 -type f -name 'cover_*' | wc -l)" -eq 16
+          echo "Verified 16 distinct drawable cover resources."
+
       - name: Install redesigned Madi Music interface
         shell: bash
         run: |
@@ -230,69 +301,43 @@ jobs:
           cp overrides/MadiAudioEffects.kt "$DEST/MadiAudioEffects.kt"
           echo "Redesigned UI, catalog, playback service and audio effects installed"
 
-      - name: Create premium launcher icon
+      - name: Install the user's actual launcher icon
         shell: bash
         run: |
           set -euo pipefail
-          sudo apt-get update
-          sudo apt-get install -y librsvg2-bin
-          PROJECT="$PROJECT_DIR"
-          RES="$PROJECT/app/src/main/res"
-          mkdir -p "$RES/drawable" "$RES/mipmap-anydpi-v26"
-          # Render SVG with librsvg so gradients, filters, crown and headphone paths are preserved.
-          rsvg-convert -w 512 -h 512 assets/madi-launcher.svg -o "$RES/drawable/madi_launcher.png"
-          for spec in "mdpi:48" "hdpi:72" "xhdpi:96" "xxhdpi:144" "xxxhdpi:192"; do
-            density="${spec%%:*}"
-            pixels="${spec##*:}"
-            mkdir -p "$RES/mipmap-$density"
-            rsvg-convert -w "$pixels" -h "$pixels" assets/madi-launcher.svg -o "$RES/mipmap-$density/ic_launcher.png"
-            cp "$RES/mipmap-$density/ic_launcher.png" "$RES/mipmap-$density/ic_launcher_round.png"
-          done
-          cat > "$RES/mipmap-anydpi-v26/ic_launcher.xml" <<'XML'
-          <adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
-              <background android:drawable="@android:color/black" />
-              <foreground android:drawable="@drawable/madi_launcher" />
-          </adaptive-icon>
-          XML
-          cp "$RES/mipmap-anydpi-v26/ic_launcher.xml" "$RES/mipmap-anydpi-v26/ic_launcher_round.xml"
-          MANIFEST="$PROJECT/app/src/main/AndroidManifest.xml"
+          python3 - "$PROJECT_DIR" <<'PY'
+          import pathlib, sys
+          from PIL import Image
+          root = pathlib.Path(sys.argv[1])
+          res = root / "app/src/main/res"
+          source = res / "drawable-nodpi/madi_user_icon.png"
+          im = Image.open(source).convert("RGBA")
+          # Keep the full user artwork; Android launcher masks it inside adaptive-icon bounds.
+          for density, size in [("mdpi",48),("hdpi",72),("xhdpi",96),("xxhdpi",144),("xxxhdpi",192)]:
+              d = res / ("mipmap-" + density)
+              d.mkdir(parents=True, exist_ok=True)
+              im.resize((size,size), Image.Resampling.LANCZOS).save(d/"ic_launcher.png")
+              im.resize((size,size), Image.Resampling.LANCZOS).save(d/"ic_launcher_round.png")
+          (res/"drawable").mkdir(exist_ok=True)
+          im.resize((512,512), Image.Resampling.LANCZOS).save(res/"drawable/madi_launcher.png")
+          anydpi = res/"mipmap-anydpi-v26"
+          anydpi.mkdir(parents=True, exist_ok=True)
+          xml = '<adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android"><background android:drawable="@android:color/black"/><foreground android:drawable="@drawable/madi_launcher"/></adaptive-icon>'
+          (anydpi/"ic_launcher.xml").write_text(xml)
+          (anydpi/"ic_launcher_round.xml").write_text(xml)
+          print("Installed uploaded icon as launcher artwork; original dimensions:", im.size)
+          PY
+          MANIFEST="$PROJECT_DIR/app/src/main/AndroidManifest.xml"
           python3 - "$MANIFEST" <<'PY'
           import pathlib, re, sys
-          p=pathlib.Path(sys.argv[1])
-          s=p.read_text()
-          app_match=re.search(r'<application\b[^>]*>', s)
-          if not app_match:
-              raise SystemExit('AndroidManifest.xml has no application element')
-          tag=app_match.group(0)
-          tag=re.sub(r'\s+android:(?:icon|roundIcon)="[^"]*"', '', tag)
-          tag=tag[:-1] + ' android:icon="@mipmap/ic_launcher" android:roundIcon="@mipmap/ic_launcher_round">'
-          s=s[:app_match.start()]+tag+s[app_match.end():]
-          permissions=[
-              'android.permission.INTERNET',
-              'android.permission.FOREGROUND_SERVICE',
-              'android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK',
-              'android.permission.POST_NOTIFICATIONS'
-          ]
-          for permission in permissions:
-              if permission not in s:
-                  s=s.replace('<application', f'<uses-permission android:name="{permission}" />\n    <application', 1)
-          service_match=re.search(r'<service\b[^>]*android:name="[^"]*MusicPlaybackService"[^>]*>', s)
-          if service_match:
-              st=service_match.group(0)
-              if 'android:exported=' not in st:
-                  st=st[:-1]+' android:exported="true">'
-              if 'android:foregroundServiceType=' not in st:
-                  st=st[:-1]+' android:foregroundServiceType="mediaPlayback">'
-              s=s[:service_match.start()]+st+s[service_match.end():]
-          elif 'androidx.media3.session.MediaSessionService' not in s:
-              service='<service android:name=".MusicPlaybackService" android:exported="true" android:foregroundServiceType="mediaPlayback"><intent-filter><action android:name="androidx.media3.session.MediaSessionService" /></intent-filter></service>'
-              s=s.replace('</application>', service+'\n</application>', 1)
-          if 'androidx.media3.session.MediaSessionService' not in s:
-              s=s.replace('</application>', '<service android:name=".MusicPlaybackService" android:exported="true" android:foregroundServiceType="mediaPlayback"><intent-filter><action android:name="androidx.media3.session.MediaSessionService" /></intent-filter></service>\n</application>', 1)
-          p.write_text(s)
-          print('Manifest permissions, MediaSessionService and adaptive icon verified')
+          p=pathlib.Path(sys.argv[1]); s=p.read_text()
+          m=re.search(r'<application\\b[^>]*>',s)
+          if not m: raise SystemExit('AndroidManifest.xml has no application element')
+          tag=re.sub(r'\\s+android:(?:icon|roundIcon)="[^"]*"','',m.group(0))
+          tag=tag[:-1]+' android:icon="@mipmap/ic_launcher" android:roundIcon="@mipmap/ic_launcher_round">'
+          p.write_text(s[:m.start()]+tag+s[m.end():])
           PY
-          echo "Adaptive Madi Music launcher icons installed"
+          echo "User-supplied icon is wired to AndroidManifest launcher icon."
 
       - name: Restore stable Android debug keystore
         uses: actions/cache@v4

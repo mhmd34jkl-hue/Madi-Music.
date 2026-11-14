@@ -156,7 +156,6 @@ private fun MadiMusic(
         "serif" -> FontFamily.Serif
         else -> FontFamily(Font(R.font.inter))
     }
-    CompositionLocalProvider(LocalTextStyle provides LocalTextStyle.current.copy(fontFamily = appFont)) {
     var showIntro by remember { mutableStateOf(true) }
     LaunchedEffect(Unit) {
         delay(2800)
@@ -203,6 +202,7 @@ private fun MadiMusic(
         onBackground = Color.White,
         onSurface = Color.White
     )) {
+        CompositionLocalProvider(LocalTextStyle provides LocalTextStyle.current.copy(fontFamily = appFont)) {
         Column(
             Modifier.fillMaxSize().background(
                 Brush.verticalGradient(listOf(Color(0xFF211333), Night, Night))
@@ -307,7 +307,7 @@ private fun MadiMusic(
                 }
             }
         }
-    }
+        }
     }
     }
 }

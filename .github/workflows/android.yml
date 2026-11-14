@@ -218,6 +218,7 @@ jobs:
           import sys, xml.etree.ElementTree as ET
           p=sys.argv[1]
           tree=ET.parse(p); root=tree.getroot()
+          ET.register_namespace('android', 'http://schemas.android.com/apk/res/android')
           ns='{http://schemas.android.com/apk/res/android}'
           app=root.find('application')
           if app is None: raise SystemExit('AndroidManifest.xml has no application element')
@@ -250,6 +251,16 @@ jobs:
               -validity 10000 \
               -dname "CN=Android Debug,O=Android,C=US"
           fi
+
+      - name: Install Inter typography
+        shell: bash
+        run: |
+          set -euo pipefail
+          FONT_DIR="$PROJECT_DIR/app/src/main/res/font"
+          mkdir -p "$FONT_DIR"
+          curl -fL --retry 3 "https://raw.githubusercontent.com/google/fonts/main/ofl/inter/Inter%5Bopsz%2Cwght%5D.ttf" -o "$FONT_DIR/inter.ttf"
+          test -s "$FONT_DIR/inter.ttf"
+          echo "Bundled Inter font for an iOS-inspired app typography"
 
       - name: Build debug APK
         run: gradle -p "$PROJECT_DIR" assembleDebug

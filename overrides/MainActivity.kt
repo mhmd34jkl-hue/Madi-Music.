@@ -395,15 +395,34 @@ private fun HomePage(
                 Spacer(Modifier.height(12.dp))
                 Box(
                     Modifier.fillMaxWidth().background(
-                        Brush.linearGradient(listOf(Color(0xFF542080), Color(0xFF211333), Color(0xFF10101B))),
-                        RoundedCornerShape(20.dp)
-                    ).padding(15.dp)
+                        Brush.linearGradient(
+                            listOf(Color(0xFF7130A0), Color(0xFF34204F), Color(0xFF14111E))
+                        ),
+                        RoundedCornerShape(24.dp)
+                    ).padding(18.dp)
                 ) {
                     Column {
-                        Text("MADI • OFFLINE", color = Color(0xFFE5C9FF), fontSize = 10.sp, fontWeight = FontWeight.Bold)
-                        Spacer(Modifier.height(5.dp))
-                        Text("موسيقاك دائماً معك", color = Color.White, fontSize = 19.sp, fontWeight = FontWeight.ExtraBold)
-                        Text("16 أغنية • 5 فنانين • تشغيل دون إنترنت", color = Color(0xFFD2C2E2), fontSize = 11.sp)
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text("MADI MUSIC", color = Color(0xFFF0E4FF), fontSize = 10.sp, fontWeight = FontWeight.Black, letterSpacing = 2.sp)
+                            Spacer(Modifier.weight(1f))
+                            Surface(
+                                color = Color(0x3322D69A),
+                                shape = RoundedCornerShape(30.dp)
+                            ) {
+                                Text("● OFFLINE", Modifier.padding(horizontal = 10.dp, vertical = 5.dp), color = Color(0xFF9AF0C9), fontSize = 9.sp, fontWeight = FontWeight.Bold)
+                            }
+                        }
+                        Spacer(Modifier.height(13.dp))
+                        Text("موسيقاك… بأسلوبك", color = Color.White, fontSize = 23.sp, fontWeight = FontWeight.Black)
+                        Text("كل نغمة قريبة منك، حتى بدون إنترنت.", color = Color(0xFFE0D0EF), fontSize = 12.sp)
+                        Spacer(Modifier.height(17.dp))
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            listOf("16 أغنية", "5 فنانين", "صوتك الخاص").forEach { label ->
+                                Surface(color = Color(0x22FFFFFF), shape = RoundedCornerShape(12.dp)) {
+                                    Text(label, Modifier.padding(horizontal = 10.dp, vertical = 7.dp), color = Color(0xFFF2E7FF), fontSize = 10.sp, fontWeight = FontWeight.SemiBold)
+                                }
+                            }
+                        }
                     }
                 }
                 Spacer(Modifier.height(6.dp))
@@ -551,16 +570,38 @@ private fun TrackListPage(
 @Composable
 private fun TrackRow(index: Int, track: Track, selected: Int, favorite: Boolean, onPlay: () -> Unit, onFavorite: () -> Unit) {
     val palettes = listOf(listOf(Color(0xFF5C268B), Color(0xFF21152F)), listOf(Color(0xFF174D67), Color(0xFF14202D)), listOf(Color(0xFF85462B), Color(0xFF2B1A25)), listOf(Color(0xFF67325F), Color(0xFF211629)))
-    Row(Modifier.fillMaxWidth().background(if (index == selected) Color(0xFF2A1C3B) else Panel, RoundedCornerShape(17.dp)).clickable(onClick = onPlay).padding(horizontal = 10.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
-        Box(Modifier.size(54.dp).background(Brush.linearGradient(palettes[index % palettes.size]), RoundedCornerShape(13.dp)), contentAlignment = Alignment.Center) {
-            Text("♫", color = Color.White, fontSize = 28.sp, fontWeight = FontWeight.Bold)
+    Row(
+        Modifier.fillMaxWidth()
+            .background(if (index == selected) Color(0xFF2B1D3B) else Panel, RoundedCornerShape(19.dp))
+            .clickable(onClick = onPlay)
+            .padding(horizontal = 11.dp, vertical = 11.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Box(
+            Modifier.size(57.dp).background(
+                Brush.linearGradient(palettes[index % palettes.size]),
+                RoundedCornerShape(15.dp)
+            ),
+            contentAlignment = Alignment.Center
+        ) {
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Text("M", color = Color.White, fontSize = 24.sp, fontWeight = FontWeight.Black)
+                Text("♫", color = Color(0xFFEAD8FF), fontSize = 10.sp)
+            }
         }
         Spacer(Modifier.width(12.dp))
         Column(Modifier.weight(1f)) {
-            Text(track.title, color = Color.White, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
-            Text(track.artist, color = Muted, fontSize = 11.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(track.title, color = Color.White, fontWeight = FontWeight.Bold, fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Spacer(Modifier.height(3.dp))
+            Text(track.artist, color = Muted, fontSize = 10.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            if (index == selected) {
+                Spacer(Modifier.height(5.dp))
+                Text("يُشغّل الآن", color = Color(0xFFD9B6FF), fontSize = 9.sp, fontWeight = FontWeight.Bold)
+            }
         }
-        IconButton(onClick = onFavorite) { Icon(if (favorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder, null, tint = if (favorite) Color(0xFFFF6FAE) else Muted, modifier = Modifier.size(20.dp)) }
+        IconButton(onClick = onFavorite) {
+            Icon(if (favorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder, null, tint = if (favorite) Color(0xFFFF6FAE) else Muted, modifier = Modifier.size(20.dp))
+        }
         Icon(Icons.Default.PlayArrow, null, tint = if (index == selected) Violet else Muted, modifier = Modifier.padding(end = 5.dp))
     }
 }

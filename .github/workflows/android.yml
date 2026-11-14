@@ -258,7 +258,7 @@ jobs:
                 ("cover_larya", ["larya"]),
                 ("cover_dam3a", ["دمعه", "دمعة"]),
                 ("cover_yadoum_alayhom", ["يدومعليهمفرحكبير"]),
-                ("cover_nahna_wahed", ["مشاثنينونحنواحد"]),
+                ("cover_nahna_wahed", ["مشاثنينونحناواحد", "نحناواحدمشاثنين"]),
                 ("cover_manawati_shani", ["مانواطيشاني"]),
                 ("cover_baba_noel", ["تراكبابانويلتسريبكامل"]),
                 ("cover_oyouni", ["عيوني"]),

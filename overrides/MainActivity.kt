@@ -176,7 +176,8 @@ private fun MadiMusic(
     var query by remember { mutableStateOf("") }
     var artistFilter by remember { mutableStateOf("الكل") }
     var showEqualizer by remember { mutableStateOf(false) }
-    val favorites = remember { mutableStateListOf<String>() }
+    val favorites = remember(prefs) { mutableStateListOf<String>().apply { addAll(prefs.getStringSet("favorite_track_ids", emptySet()) ?: emptySet()) } }
+    fun toggleFavorite(id: String) { if (favorites.contains(id)) favorites.remove(id) else favorites.add(id); prefs.edit().putStringSet("favorite_track_ids", favorites.toSet()).apply() }
     val tracks = MusicCatalog.tracks
     val current = tracks[selectedIndex]
     val artists = listOf("الكل") + tracks.map { it.artist }.distinct()
@@ -244,12 +245,12 @@ private fun MadiMusic(
                         query, { query = it }, artistFilter, { artistFilter = it },
                         artists, tracks.mapIndexed { index, track -> index to track.title },
                         tracks.map { it.artist }, selectedIndex, favorites,
-                        { id -> if (favorites.contains(id)) favorites.remove(id) else favorites.add(id) }, ::play,
+                        ::toggleFavorite, ::play,
                         onSearch = { page = 1 }
                     )
-                    1 -> SearchPage(query, { query = it }, tracks, selectedIndex, favorites, { id -> if (favorites.contains(id)) favorites.remove(id) else favorites.add(id) }, ::play) 
-                    2 -> TrackListPage("مكتبتي", "كل أغانيك في مكان واحد", tracks.indices.toList(), tracks, selectedIndex, favorites, { id -> if (favorites.contains(id)) favorites.remove(id) else favorites.add(id) }, ::play)
-                    3 -> TrackListPage("الأغاني المفضلة", "الأغاني التي حفظتها بقلبك", tracks.indices.filter { favorites.contains(tracks[it].id) }, tracks, selectedIndex, favorites, { id -> if (favorites.contains(id)) favorites.remove(id) else favorites.add(id) }, ::play)
+                    1 -> SearchPage(query, { query = it }, tracks, selectedIndex, favorites, ::toggleFavorite, ::play) 
+                    2 -> TrackListPage("مكتبتي", "كل أغانيك في مكان واحد", tracks.indices.toList(), tracks, selectedIndex, favorites, ::toggleFavorite, ::play)
+                    3 -> TrackListPage("الأغاني المفضلة", "الأغاني التي حفظتها بقلبك", tracks.indices.filter { favorites.contains(tracks[it].id) }, tracks, selectedIndex, favorites, ::toggleFavorite, ::play)
                     5 -> NowPlayingPage(current, playing, { page = 0 }, { if (playing) { player?.pause(); playing = false } else { if (player?.currentMediaItem == null) play(selectedIndex) else { player?.play(); playing = true } } }, ::play, selectedIndex, tracks.lastIndex, { showEqualizer = true })
                     else -> SettingsPage(
                         signedInName, onGoogleLogin, onFacebookLogin, onSignOut

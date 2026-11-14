@@ -312,15 +312,16 @@ jobs:
               -dname "CN=Android Debug,O=Android,C=US"
           fi
 
-      - name: Install Inter typography
+      - name: Install uploaded iPhone font
         shell: bash
         run: |
           set -euo pipefail
           FONT_DIR="$PROJECT_DIR/app/src/main/res/font"
           mkdir -p "$FONT_DIR"
-          curl -fL --retry 3 "https://raw.githubusercontent.com/google/fonts/main/ofl/inter/Inter%5Bopsz%2Cwght%5D.ttf" -o "$FONT_DIR/inter.ttf"
-          test -s "$FONT_DIR/inter.ttf"
-          echo "Bundled Inter font for an iOS-inspired app typography"
+          test -s "iPhone.ttf" || { echo 'Uploaded iPhone.ttf is missing from repository root'; exit 1; }
+          cp "iPhone.ttf" "$FONT_DIR/iphone.ttf"
+          test -s "$FONT_DIR/iphone.ttf"
+          echo "Installed user-uploaded iPhone.ttf as the fixed app font"
 
       - name: Build debug APK
         run: gradle -p "$PROJECT_DIR" assembleDebug

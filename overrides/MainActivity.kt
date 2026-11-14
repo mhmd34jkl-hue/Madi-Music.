@@ -373,53 +373,70 @@ private fun HomePage(
     selected: Int, favorites: List<String>, onFavorite: (String) -> Unit, onPlay: (Int) -> Unit, onSearch: () -> Unit
 ) {
     val tracks = MusicCatalog.tracks
-    Column(Modifier.fillMaxSize().padding(horizontal = 18.dp)) {
-        Text("مساحتك الموسيقية", color = Muted, fontSize = 13.sp)
-        Text("صوتك. مزاجك. عالمك.", color = Color.White, fontSize = 28.sp, fontWeight = FontWeight.ExtraBold)
-        Spacer(Modifier.height(16.dp))
-        Box(Modifier.fillMaxWidth().height(174.dp).background(Brush.linearGradient(listOf(Color(0xFF542080), Color(0xFF211333), Color(0xFF10101B))), RoundedCornerShape(24.dp)).clickable { onPlay(selected.coerceIn(0, tracks.lastIndex)) }.padding(19.dp)) {
-            Column(Modifier.fillMaxHeight(), verticalArrangement = Arrangement.SpaceBetween) {
-                Surface(color = Color(0x33FFFFFF), shape = RoundedCornerShape(30.dp)) { Text("MADI • OFFLINE", Modifier.padding(horizontal = 11.dp, vertical = 6.dp), color = Color.White, fontSize = 10.sp, fontWeight = FontWeight.Bold) }
-                Column {
-                    Text("موسيقاك دائماً معك", color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.ExtraBold)
-                    Text("استمع إلى مكتبتك أينما كنت، حتى دون إنترنت", color = Color(0xFFE0D4ED), fontSize = 11.sp)
-                    Spacer(Modifier.height(10.dp))
-                    Surface(color = Violet, shape = RoundedCornerShape(30.dp)) {
-                        Row(Modifier.padding(horizontal = 14.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-                            Icon(Icons.Default.PlayArrow, null, tint = Color.White)
-                            Text("استمع الآن", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 12.sp)
-                        }
+    val filtered = indexedTitles.filter { pair ->
+        val track = tracks[pair.first]
+        (artistFilter == "الكل" || track.artist == artistFilter) &&
+            (query.isBlank() || track.title.contains(query, true) || track.artist.contains(query, true))
+    }
+    LazyColumn(
+        Modifier.fillMaxSize().padding(horizontal = 18.dp),
+        verticalArrangement = Arrangement.spacedBy(10.dp),
+        contentPadding = PaddingValues(bottom = 14.dp)
+    ) {
+        item {
+            Column {
+                Text("مساحتك الموسيقية", color = Muted, fontSize = 12.sp)
+                Text("صوتك. مزاجك. عالمك.", color = Color.White, fontSize = 27.sp, fontWeight = FontWeight.ExtraBold)
+                Spacer(Modifier.height(12.dp))
+                SearchField(query, onQuery, onSearch)
+                Spacer(Modifier.height(12.dp))
+                Box(
+                    Modifier.fillMaxWidth().background(
+                        Brush.linearGradient(listOf(Color(0xFF542080), Color(0xFF211333), Color(0xFF10101B))),
+                        RoundedCornerShape(20.dp)
+                    ).padding(15.dp)
+                ) {
+                    Column {
+                        Text("MADI • OFFLINE", color = Color(0xFFE5C9FF), fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                        Spacer(Modifier.height(5.dp))
+                        Text("موسيقاك دائماً معك", color = Color.White, fontSize = 19.sp, fontWeight = FontWeight.ExtraBold)
+                        Text("16 أغنية • 5 فنانين • تشغيل دون إنترنت", color = Color(0xFFD2C2E2), fontSize = 11.sp)
                     }
                 }
+                Spacer(Modifier.height(6.dp))
+                Text("الفنانون", color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                androidx.compose.foundation.lazy.LazyRow(horizontalArrangement = Arrangement.spacedBy(7.dp)) {
+                    items(artists.size) { i ->
+                        FilterChip(
+                            selected = artistFilter == artists[i],
+                            onClick = { onArtist(artists[i]) },
+                            label = { Text(artists[i], fontSize = 11.sp) },
+                            colors = FilterChipDefaults.filterChipColors(
+                                selectedContainerColor = Color(0xFF63318A),
+                                selectedLabelColor = Color.White,
+                                labelColor = Muted
+                            )
+                        )
+                    }
+                }
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text("كل الأغاني", color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.ExtraBold)
+                    Spacer(Modifier.weight(1f))
+                    Text("${filtered.size} أغنية", color = Muted, fontSize = 11.sp)
+                }
             }
-            Text("♫", Modifier.align(Alignment.TopEnd).padding(5.dp), color = Color(0x66E5B8FF), fontSize = 68.sp)
         }
-        Spacer(Modifier.height(17.dp))
-        SearchField(query, onQuery, onSearch)
-        Spacer(Modifier.height(16.dp))
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Text("الفنانون", color = Color.White, fontSize = 17.sp, fontWeight = FontWeight.Bold)
-            Spacer(Modifier.weight(1f))
-            Text("${artists.size - 1} فنانين", color = Muted, fontSize = 11.sp)
-        }
-        Spacer(Modifier.height(8.dp))
-        androidx.compose.foundation.lazy.LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            items(artists.size) { i ->
-                FilterChip(selected = artistFilter == artists[i], onClick = { onArtist(artists[i]) }, label = { Text(artists[i]) },
-                    colors = FilterChipDefaults.filterChipColors(selectedContainerColor = Color(0xFF63318A), selectedLabelColor = Color.White, labelColor = Muted))
-            }
-        }
-        Spacer(Modifier.height(12.dp))
-        Text("مكتبتك الموسيقية", color = Color.White, fontSize = 17.sp, fontWeight = FontWeight.Bold)
-        Text("كل أغانيك محفوظة على جهازك", color = Muted, fontSize = 11.sp)
-        Spacer(Modifier.height(8.dp))
-        val filtered = indexedTitles.filter { pair ->
-            val track = tracks[pair.first]
-            (artistFilter == "الكل" || track.artist == artistFilter) && (query.isBlank() || track.title.contains(query, true) || track.artist.contains(query, true))
-        }
-        LazyColumn(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(9.dp), contentPadding = PaddingValues(bottom = 12.dp)) {
+        if (filtered.isEmpty()) {
+            item { Text("لا توجد نتائج مطابقة. جرّب اسماً آخر.", color = Muted, modifier = Modifier.padding(vertical = 22.dp)) }
+        } else {
             itemsIndexed(filtered) { _, pair ->
-                TrackRow(pair.first, tracks[pair.first], selected, favorites.contains(tracks[pair.first].id), { onPlay(pair.first) }, { onFavorite(tracks[pair.first].id) })
+                val index = pair.first
+                TrackRow(
+                    index, tracks[index], selected,
+                    favorites.contains(tracks[index].id),
+                    { onPlay(index) },
+                    { onFavorite(tracks[index].id) }
+                )
             }
         }
     }

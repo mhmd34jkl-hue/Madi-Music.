@@ -176,7 +176,7 @@ private fun MadiMusic(
     var query by remember { mutableStateOf("") }
     var artistFilter by remember { mutableStateOf("الكل") }
     var showEqualizer by remember { mutableStateOf(false) }
-    val favorites = remember(prefs) { mutableStateListOf<String>().apply { addAll(prefs.getStringSet("favorite_track_ids", emptySet()) ?: emptySet()) } }
+    val favorites = remember(prefs) { mutableStateListOf<String>().apply { addAll(prefs.getStringSet("favorite_track_ids", mutableSetOf()) ?: emptySet()) } }
     fun toggleFavorite(id: String) { if (favorites.contains(id)) favorites.remove(id) else favorites.add(id); prefs.edit().putStringSet("favorite_track_ids", favorites.toSet()).apply() }
     val tracks = MusicCatalog.tracks
     val current = tracks[selectedIndex]

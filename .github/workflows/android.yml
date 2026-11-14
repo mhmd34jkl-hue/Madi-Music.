@@ -133,12 +133,16 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p audio-packs
-          if [ "$GITHUB_EVENT_NAME" = "release" ]; then
-            TAG="$GITHUB_REF_NAME"
-          else
-            TAG="$(gh release view --repo "$GH_REPO" --json tagName --jq .tagName)"
+          # Audio packs live in the dedicated v1.0 release.
+          # Never download the separate emoji/font release (emoji-v1) as audio input.
+          TAG="v1.0"
+          gh release download "$TAG" --repo "$GH_REPO" --dir audio-packs --pattern '*.zip' --pattern '*.7z'
+          # Enforce a strict archive-only boundary before extraction.
+          if find audio-packs -maxdepth 1 -type f ! -iname '*.zip' ! -iname '*.7z' | grep -q .; then
+            echo "Non-audio asset found in audio-packs; refusing to continue" >&2
+            exit 1
           fi
-          gh release download "$TAG" --repo "$GH_REPO" --dir audio-packs
+          test "$(find audio-packs -maxdepth 1 -type f | wc -l)" -eq 6
           ls -lah audio-packs
 
       - name: Extract and number all 16 songs

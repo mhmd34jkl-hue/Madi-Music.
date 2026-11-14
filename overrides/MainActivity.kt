@@ -14,6 +14,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.rememberScrollState
@@ -163,8 +164,7 @@ private fun MadiMusic(
     }
     if (showIntro) {
         MadiIntroScreen()
-        return
-    }
+    } else {
     var page by remember { mutableIntStateOf(0) }
     var selectedIndex by remember { mutableIntStateOf(0) }
     var playing by remember { mutableStateOf(false) }
@@ -307,6 +307,7 @@ private fun MadiMusic(
                 }
             }
         }
+    }
     }
     }
 }

@@ -314,7 +314,7 @@ private fun MadiMusic(
         }
     }
 }
-
+}
 
 @Composable
 private fun MadiIntroScreen() {
@@ -623,7 +623,7 @@ private fun SearchField(value: String, onValue: (String) -> Unit, onSearch: () -
         onValueChange = onValue,
         modifier = Modifier.fillMaxWidth(),
         placeholder = { Text("ابحث عن أغنية أو فنان…", color = Muted) },
-        leadingIcon = { Text("🔍", fontSize = 20.sp) },
+        leadingIcon = { Icon(Icons.Default.Search, contentDescription = "بحث", tint = Muted) },
         singleLine = true,
         shape = RoundedCornerShape(16.dp),
         colors = OutlinedTextFieldDefaults.colors(

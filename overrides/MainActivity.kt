@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
@@ -583,167 +584,161 @@ private fun SearchField(value: String, onValue: (String) -> Unit, onSearch: () -
 }
 
 @Composable
-private fun SettingsPage() {
+private fun SettingsPage(
+    signedInName: String?,
+    onGoogleLogin: () -> Unit,
+    onFacebookLogin: () -> Unit,
+    onSignOut: () -> Unit,
+    fontChoice: String,
+    onFontChoice: (String) -> Unit
+) {
+    var showEqualizer by remember { mutableStateOf(false) }
+    var showFonts by remember { mutableStateOf(false) }
     val context = LocalContext.current
     val version = remember {
-        try {
-            context.packageManager.getPackageInfo(context.packageName, 0).versionName ?: "غير معروف"
-        } catch (_: Exception) { "غير معروف" }
+        try { context.packageManager.getPackageInfo(context.packageName, 0).versionName ?: "1.1" }
+        catch (_: Exception) { "1.1" }
     }
-    var infoDialog by remember { mutableStateOf<String?>(null) }
-
     Column(
         Modifier.fillMaxSize().background(
             Brush.verticalGradient(listOf(Color(0xFF171024), Night, Night))
         ).padding(horizontal = 18.dp)
     ) {
-        Row(
-            Modifier.fillMaxWidth().padding(top = 7.dp, bottom = 5.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Column(Modifier.weight(1f)) {
-                Text("مركز التحكم", color = Color.White, fontSize = 27.sp, fontWeight = FontWeight.ExtraBold)
-                Text("كل تفاصيل تجربتك الموسيقية في مكان واحد", color = Muted, fontSize = 11.sp)
-            }
-            Box(
-                Modifier.size(43.dp).background(
-                    Brush.linearGradient(listOf(Color(0xFFB33CFF), Color(0xFF44205F))),
-                    RoundedCornerShape(15.dp)
-                ),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(Icons.Default.Settings, null, tint = Color.White, modifier = Modifier.size(23.dp))
-            }
-        }
-
+        Text("مركز التحكم", color = Color.White, fontSize = 27.sp, fontWeight = FontWeight.ExtraBold, modifier = Modifier.padding(top = 8.dp))
+        Text("إعدادات تجربتك الموسيقية", color = Muted, fontSize = 12.sp)
         LazyColumn(
-            verticalArrangement = Arrangement.spacedBy(14.dp),
-            contentPadding = PaddingValues(top = 12.dp, bottom = 24.dp)
+            verticalArrangement = Arrangement.spacedBy(13.dp),
+            contentPadding = PaddingValues(top = 14.dp, bottom = 24.dp)
         ) {
             item {
                 Column(
                     Modifier.fillMaxWidth().background(
                         Brush.linearGradient(listOf(Color(0xFF482267), Color(0xFF21152F), Color(0xFF15111E))),
-                        RoundedCornerShape(24.dp)
-                    ).padding(18.dp)
+                        RoundedCornerShape(23.dp)
+                    ).padding(16.dp)
                 ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Box(
-                            Modifier.size(58.dp).background(Color(0xFF6E3B91), RoundedCornerShape(19.dp)),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text("M", color = Color.White, fontSize = 35.sp, fontWeight = FontWeight.Black)
-                        }
-                        Spacer(Modifier.width(13.dp))
-                        Column(Modifier.weight(1f)) {
-                            Text("حساب Madi Music", color = Color.White, fontSize = 17.sp, fontWeight = FontWeight.ExtraBold)
-                            Text("سجّل دخولك لمزامنة تجربتك", color = Color(0xFFD8C7E8), fontSize = 11.sp)
-                        }
-                        Text("✦", color = Color(0xFFE6C8FF), fontSize = 25.sp)
-                    }
-                    Spacer(Modifier.height(15.dp))
+                    Text("حساب Madi Music", color = Color.White, fontSize = 17.sp, fontWeight = FontWeight.ExtraBold)
+                    Spacer(Modifier.height(5.dp))
                     Text(
-                        "تسجيل الدخول الحقيقي عبر Google وFacebook قيد الربط. لن نعرض أزراراً شكلية قبل إعداد الاتصال الآمن.",
-                        color = Color(0xFFE0D3EC),
-                        fontSize = 11.sp,
-                        lineHeight = 17.sp
+                        signedInName ?: "استمع إلى موسيقاك دون حساب، أو سجّل الدخول لمزامنة حسابك",
+                        color = Color(0xFFD8C7E8), fontSize = 11.sp
                     )
                     Spacer(Modifier.height(13.dp))
-                    Surface(
-                        color = Color(0x3325C78A),
-                        shape = RoundedCornerShape(30.dp)
-                    ) {
-                        Text(
-                            "●  تشغيل الموسيقى دون حساب متاح دائماً",
-                            Modifier.padding(horizontal = 11.dp, vertical = 7.dp),
-                            color = Color(0xFF9CE8C8),
-                            fontSize = 10.sp,
-                            fontWeight = FontWeight.Bold
-                        )
+                    if (signedInName == null) {
+                        Button(
+                            onClick = onGoogleLogin,
+                            modifier = Modifier.fillMaxWidth(),
+                            colors = ButtonDefaults.buttonColors(containerColor = Color.White, contentColor = Color(0xFF241B31))
+                        ) { Text("G   المتابعة باستخدام Google", fontWeight = FontWeight.Bold) }
+                        OutlinedButton(
+                            onClick = onFacebookLogin,
+                            modifier = Modifier.fillMaxWidth(),
+                            colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.White)
+                        ) { Text("f   المتابعة باستخدام Facebook", fontWeight = FontWeight.Bold) }
+                    } else {
+                        Text("●  الحساب متصل", color = Color(0xFF8FE0B7), fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                        TextButton(onClick = onSignOut) { Text("تسجيل الخروج", color = Color(0xFFFFA7B5)) }
                     }
                 }
             }
-
             item {
-                SettingsSection("التخصيص", "اجعل Madi Music على ذوقك") {
-                    SettingsRow("🎨", "المظهر والألوان", "الثيم الداكن واللمسات البنفسجية", "قريباً") {
-                        infoDialog = "خيارات المظهر والألوان"
-                    }
-                    SettingsRow("文", "اللغة", "العربية والإنجليزية", "قريباً") {
-                        infoDialog = "اختيار لغة التطبيق"
-                    }
-                    SettingsRow("Aa", "الخطوط", "مظهر كتابة أنيق وواضح", "قريباً") {
-                        infoDialog = "إعدادات الخطوط"
+                SettingsSection("التخصيص", "مظهر أنيق يناسب ذوقك") {
+                    SettingsRow("Aa", "الخط الأساسي", "Inter — قريب من أسلوب خطوط iPhone", null) { showFonts = true }
+                    SettingsRow("文", "اللغة", "العربية والإنجليزية", null) {
+                        Toast.makeText(context, "الواجهة العربية مفعّلة حالياً", Toast.LENGTH_SHORT).show()
                     }
                 }
             }
-
             item {
-                SettingsSection("الصوت والتشغيل", "تحكّم في طريقة استماعك") {
-                    SettingsRow("♫", "معادل الصوت", "تحسين الجهير والوضوح والتوازن", "قريباً") {
-                        infoDialog = "معادل الصوت"
-                    }
-                    SettingsRow("⏭", "تجربة التشغيل", "الانتقال السلس والتشغيل المتواصل", "قريباً") {
-                        infoDialog = "خيارات التشغيل"
-                    }
-                    SettingsRow("🎧", "جودة الصوت", "إعدادات الصوت المحلية", "قريباً") {
-                        infoDialog = "جودة الصوت"
+                SettingsSection("الصوت والتشغيل", "تحكّم فعلي في الصوت") {
+                    SettingsRow("♫", "معادل الصوت", "اضبط الترددات والجهير حسب ذوقك", null) { showEqualizer = true }
+                    SettingsRow("⏭", "التشغيل في الخلفية", "التحكم من الإشعارات وشاشة القفل", null) {
+                        Toast.makeText(context, "استخدم لوحة الإشعارات للتحكم بالتشغيل", Toast.LENGTH_SHORT).show()
                     }
                 }
             }
-
             item {
                 SettingsSection("المكتبة والتخزين", "موسيقاك تبقى على جهازك") {
-                    SettingsRow("⬇", "إدارة الملفات", "الأغاني المحفوظة والمساحة المستخدمة", "قريباً") {
-                        infoDialog = "إدارة التخزين"
-                    }
-                    SettingsRow("♡", "المفضلة", "إدارة الأغاني التي تحبها", null) {
-                        infoDialog = "يمكنك إدارة المفضلة من تبويب المفضلة أسفل التطبيق."
+                    SettingsRow("♡", "الأغاني المفضلة", "إدارة الأغاني التي تحبها", null) {
+                        Toast.makeText(context, "افتح تبويب المفضلة من الشريط السفلي", Toast.LENGTH_SHORT).show()
                     }
                 }
             }
-
             item {
                 SettingsSection("الدعم والتطبيق", "نحن هنا لمساعدتك") {
-                    SettingsRow("✉", "الدعم والمساعدة", "مساعد Madi ثم التواصل عبر واتساب", null) {
-                        val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://wa.me/$SupportNumber"))
-                        context.startActivity(intent)
+                    SettingsRow("✉", "الدعم والمساعدة", "تواصل معنا عبر واتساب", null) {
+                        runCatching { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://wa.me/$SupportNumber"))) }
                     }
-                    SettingsRow("ⓘ", "حول Madi Music", "الإصدار $version", null) {
-                        infoDialog = "Madi Music\nمشغل موسيقى مستقل، صُنع بكل شغف على يد شاب ليبي من ضواحي بنغازي.\nالإصدار: $version"
-                    }
-                    SettingsRow("🔒", "الخصوصية والأمان", "حماية حسابك وبياناتك", "قريباً") {
-                        infoDialog = "معلومات الخصوصية والأمان"
+                    SettingsRow("ⓘ", "حول Madi Music", "الإصدار $version • صنع في ليبيا", null) {
+                        Toast.makeText(context, "Madi Music • Made with passion in Libya", Toast.LENGTH_LONG).show()
                     }
                 }
-            }
-
-            item {
-                Text(
-                    "MADI MUSIC  •  MADE WITH PASSION IN LIBYA 🇱🇾",
-                    Modifier.fillMaxWidth().padding(top = 2.dp),
-                    color = Color(0xFF756783),
-                    fontSize = 9.sp,
-                    letterSpacing = 1.2.sp,
-                    textAlign = androidx.compose.ui.text.style.TextAlign.Center
-                )
             }
         }
     }
 
-    infoDialog?.let { message ->
+    if (showEqualizer) EqualizerDialog(onDismiss = { showEqualizer = false })
+    if (showFonts) {
         AlertDialog(
-            onDismissRequest = { infoDialog = null },
+            onDismissRequest = { showFonts = false },
             containerColor = Color(0xFF21172E),
-            title = { Text("Madi Music", color = Color.White, fontWeight = FontWeight.Bold) },
-            text = { Text(message, color = Color(0xFFD4C6E2), fontSize = 13.sp, lineHeight = 19.sp) },
-            confirmButton = {
-                TextButton(onClick = { infoDialog = null }) {
-                    Text("حسناً", color = Color(0xFFD6A8FF))
+            title = { Text("اختيار الخط", color = Color.White, fontWeight = FontWeight.Bold) },
+            text = {
+                Column {
+                    TextButton(onClick = { onFontChoice("ios"); showFonts = false }) { Text("Inter — أسلوب قريب من iPhone", color = Color.White) }
+                    TextButton(onClick = { onFontChoice("system"); showFonts = false }) { Text("خط النظام", color = Color.White) }
+                    TextButton(onClick = { onFontChoice("serif"); showFonts = false }) { Text("خط Serif", color = Color.White) }
                 }
-            }
+            },
+            confirmButton = { TextButton(onClick = { showFonts = false }) { Text("إغلاق", color = Violet) } }
         )
     }
+}
+
+@Composable
+private fun EqualizerDialog(onDismiss: () -> Unit) {
+    val count = MadiAudioEffects.bandCount().coerceIn(3, 10)
+    val range = MadiAudioEffects.levelRange()
+    val levels = remember(count) { mutableStateListOf<Float>().apply { repeat(count) { add(0f) } } }
+    val labels = remember(count) {
+        (0 until count).map { band ->
+            val hz = MadiAudioEffects.centerFrequencyHz(band)
+            if (hz >= 1000) "${hz / 1000.0} kHz" else if (hz > 0) "${hz} Hz" else "Band ${band + 1}"
+        }
+    }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        containerColor = Color(0xFF21172E),
+        title = { Text("معادل الصوت", color = Color.White, fontWeight = FontWeight.ExtraBold) },
+        text = {
+            Column(Modifier.heightIn(max = 440.dp).verticalScroll(rememberScrollState())) {
+                Text("اضبط كل نطاق صوتي. التغييرات تطبّق على جلسة التشغيل الحالية.", color = Muted, fontSize = 11.sp)
+                Spacer(Modifier.height(12.dp))
+                levels.indices.forEach { i ->
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(labels[i], color = Color.White, fontSize = 10.sp, modifier = Modifier.width(58.dp))
+                        Slider(
+                            value = levels[i],
+                            onValueChange = {
+                                levels[i] = it
+                                MadiAudioEffects.setBandLevel(i, it)
+                            },
+                            valueRange = range.first..range.second,
+                            modifier = Modifier.weight(1f)
+                        )
+                        Text("${levels[i].toInt()} dB", color = Color(0xFFD9B8FF), fontSize = 9.sp, modifier = Modifier.width(40.dp))
+                    }
+                }
+                TextButton(onClick = {
+                    levels.indices.forEach { i ->
+                        levels[i] = 0f
+                        MadiAudioEffects.setBandLevel(i, 0f)
+                    }
+                }) { Text("إعادة ضبط", color = Violet) }
+            }
+        },
+        confirmButton = { TextButton(onClick = onDismiss) { Text("تم", color = Violet) } }
+    )
 }
 
 @Composable

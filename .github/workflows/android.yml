@@ -110,6 +110,13 @@ jobs:
                           '\n    implementation("com.google.firebase:firebase-auth")\n')
               app = app[:end] + firebase + app[end:]
 
+          if 'com.google.android.gms:play-services-auth' not in app:
+              match = re.search(r'dependencies\s*\{', app)
+              if not match: raise SystemExit('App Gradle dependencies block not found')
+              end = app.find('}', match.end())
+              if end < 0: raise SystemExit('App Gradle dependencies block is incomplete')
+              app = app[:end] + '\n    implementation("com.google.android.gms:play-services-auth:21.3.0")\n' + app[end:]
+
           root_path.write_text(root)
           app_path.write_text(app)
           print('Firebase configuration and Authentication SDK added')
@@ -135,10 +142,15 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p extracted
+          # Keep artist archives separate so duplicate basenames cannot overwrite tracks.
           for f in audio-packs/*; do
+            pack="$(basename "$f")"
+            pack="${pack%.*}"
+            dest="extracted/$pack"
+            mkdir -p "$dest"
             case "$f" in
-              *.zip) unzip -oq "$f" -d extracted ;;
-              *.7z) 7z x -y "-o$PWD/extracted" "$f" >/dev/null ;;
+              *.zip) unzip -oq "$f" -d "$dest" ;;
+              *.7z) 7z x -y "-o$PWD/$dest" "$f" >/dev/null ;;
               *) echo "Unsupported audio asset: $f"; exit 1 ;;
             esac
           done
@@ -150,6 +162,7 @@ jobs:
           echo "Found ${#TRACKS[@]} MP3 files"
           if [ "${#TRACKS[@]}" -ne 16 ]; then
             echo "Expected 16 MP3 files but found ${#TRACKS[@]}"
+            printf '%s\n' "${TRACKS[@]}"
             exit 1
           fi
 
@@ -158,8 +171,11 @@ jobs:
 
           for i in "${!TRACKS[@]}"; do
             number=$(printf "%03d" "$((i + 1))")
+            test -s "${TRACKS[$i]}" || { echo "Empty audio file: ${TRACKS[$i]}"; exit 1; }
+            echo "Audio mapping: $number.mp3 <- ${TRACKS[$i]}"
             cp -f "${TRACKS[$i]}" "$MUSIC/$number.mp3"
           done
+          test "$(find "$MUSIC" -maxdepth 1 -type f -name '*.mp3' | wc -l)" -eq 16
 
       - name: Install redesigned Madi Music interface
         shell: bash
@@ -168,7 +184,10 @@ jobs:
           DEST="$PROJECT_DIR/app/src/main/java/com/madi/music"
           mkdir -p "$DEST"
           cp overrides/MainActivity.kt "$DEST/MainActivity.kt"
-          echo "Redesigned MainActivity installed"
+          cp overrides/MusicCatalog.kt "$DEST/MusicCatalog.kt"
+          cp overrides/MusicPlaybackService.kt "$DEST/MusicPlaybackService.kt"
+          cp overrides/MadiAudioEffects.kt "$DEST/MadiAudioEffects.kt"
+          echo "Redesigned UI, catalog, playback service and audio effects installed"
 
       - name: Create premium launcher icon
         shell: bash
@@ -178,7 +197,7 @@ jobs:
           sudo apt-get install -y imagemagick
           PROJECT="$PROJECT_DIR"
           RES="$PROJECT/app/src/main/res"
-          mkdir -p "$RES/drawable"
+          mkdir -p "$RES/drawable" "$RES/mipmap-anydpi-v26"
           convert -background none assets/madi-launcher.svg -resize 512x512 "$RES/drawable/madi_launcher.png"
           for spec in "mdpi:48" "hdpi:72" "xhdpi:96" "xxhdpi:144" "xxxhdpi:192"; do
             density="${spec%%:*}"
@@ -187,9 +206,27 @@ jobs:
             convert "$RES/drawable/madi_launcher.png" -resize "${pixels}x${pixels}" "$RES/mipmap-$density/ic_launcher.png"
             cp "$RES/mipmap-$density/ic_launcher.png" "$RES/mipmap-$density/ic_launcher_round.png"
           done
+          cat > "$RES/mipmap-anydpi-v26/ic_launcher.xml" <<'XML'
+          <adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
+              <background android:drawable="@android:color/black" />
+              <foreground android:drawable="@drawable/madi_launcher" />
+          </adaptive-icon>
+          XML
+          cp "$RES/mipmap-anydpi-v26/ic_launcher.xml" "$RES/mipmap-anydpi-v26/ic_launcher_round.xml"
           MANIFEST="$PROJECT/app/src/main/AndroidManifest.xml"
-          sed -i 's#<application #<application android:icon="@mipmap/ic_launcher" android:roundIcon="@mipmap/ic_launcher_round" #' "$MANIFEST"
-          echo "Custom Madi Music launcher icon installed"
+          python3 - "$MANIFEST" <<'PY'
+          import sys, xml.etree.ElementTree as ET
+          p=sys.argv[1]
+          tree=ET.parse(p); root=tree.getroot()
+          ns='{http://schemas.android.com/apk/res/android}'
+          app=root.find('application')
+          if app is None: raise SystemExit('AndroidManifest.xml has no application element')
+          app.set(ns+'icon','@mipmap/ic_launcher')
+          app.set(ns+'roundIcon','@mipmap/ic_launcher_round')
+          tree.write(p, encoding='utf-8', xml_declaration=True)
+          print('Manifest launcher icon attributes verified')
+          PY
+          echo "Adaptive Madi Music launcher icons installed"
 
       - name: Restore stable Android debug keystore
         uses: actions/cache@v4

@@ -80,7 +80,7 @@ class MainActivity : ComponentActivity() {
             requestPermissions(arrayOf(Manifest.permission.POST_NOTIFICATIONS), 7201)
         }
         setContent {
-            MadiMusic(controller, signedInName, ::startGoogleLogin, ::startFacebookLogin, ::signOut)
+            MadiMusic(controller, signedInName, ::startGoogleLogin, ::startFacebookLogin, ::signOut, ::signInWithEmail, ::createEmailAccount, ::sendPasswordReset)
         }
         val token = SessionToken(this, ComponentName(this, MusicPlaybackService::class.java))
         controllerFuture = MediaController.Builder(this, token).buildAsync()
@@ -95,6 +95,64 @@ class MainActivity : ComponentActivity() {
         }.onFailure {
             Toast.makeText(this, "تعذر بدء تسجيل Google. تحقق من إعداد Firebase.", Toast.LENGTH_LONG).show()
         }
+    }
+
+    private fun signInWithEmail(email: String, password: String) {
+        val cleanEmail = email.trim()
+        if (cleanEmail.isBlank() || password.isBlank()) {
+            Toast.makeText(this, "أدخل البريد الإلكتروني وكلمة المرور", Toast.LENGTH_SHORT).show()
+            return
+        }
+        auth.signInWithEmailAndPassword(cleanEmail, password)
+            .addOnSuccessListener { result ->
+                signedInName = result.user?.displayName ?: result.user?.email ?: cleanEmail
+                Toast.makeText(this, "تم تسجيل الدخول بالبريد الإلكتروني", Toast.LENGTH_SHORT).show()
+            }
+            .addOnFailureListener { error ->
+                Toast.makeText(this, error.localizedMessage ?: "تعذر تسجيل الدخول، تحقق من البيانات", Toast.LENGTH_LONG).show()
+            }
+    }
+
+    private fun createEmailAccount(email: String, password: String) {
+        val cleanEmail = email.trim()
+        if (cleanEmail.isBlank() || !android.util.Patterns.EMAIL_ADDRESS.matcher(cleanEmail).matches()) {
+            Toast.makeText(this, "أدخل بريداً إلكترونياً صحيحاً", Toast.LENGTH_SHORT).show()
+            return
+        }
+        if (password.length < 6) {
+            Toast.makeText(this, "كلمة المرور يجب أن تكون 6 أحرف على الأقل", Toast.LENGTH_SHORT).show()
+            return
+        }
+        auth.createUserWithEmailAndPassword(cleanEmail, password)
+            .addOnSuccessListener { result ->
+                result.user?.sendEmailVerification()
+                    ?.addOnSuccessListener {
+                        signedInName = result.user?.email ?: cleanEmail
+                        Toast.makeText(this, "تم إنشاء الحساب. أرسلنا رابط التحقق إلى بريدك الإلكتروني", Toast.LENGTH_LONG).show()
+                    }
+                    ?.addOnFailureListener { error ->
+                        signedInName = result.user?.email ?: cleanEmail
+                        Toast.makeText(this, "تم إنشاء الحساب، لكن تعذر إرسال رسالة التحقق: " + (error.localizedMessage ?: "حاول لاحقاً"), Toast.LENGTH_LONG).show()
+                    }
+            }
+            .addOnFailureListener { error ->
+                Toast.makeText(this, error.localizedMessage ?: "تعذر إنشاء الحساب", Toast.LENGTH_LONG).show()
+            }
+    }
+
+    private fun sendPasswordReset(email: String) {
+        val cleanEmail = email.trim()
+        if (cleanEmail.isBlank() || !android.util.Patterns.EMAIL_ADDRESS.matcher(cleanEmail).matches()) {
+            Toast.makeText(this, "أدخل البريد الإلكتروني المرتبط بحسابك", Toast.LENGTH_SHORT).show()
+            return
+        }
+        auth.sendPasswordResetEmail(cleanEmail)
+            .addOnSuccessListener {
+                Toast.makeText(this, "إذا كان البريد مسجلاً، فستصلك رسالة لإعادة تعيين كلمة المرور", Toast.LENGTH_LONG).show()
+            }
+            .addOnFailureListener { error ->
+                Toast.makeText(this, error.localizedMessage ?: "تعذر إرسال رابط الاستعادة", Toast.LENGTH_LONG).show()
+            }
     }
 
     private fun startFacebookLogin() {
@@ -154,7 +212,10 @@ private fun MadiMusic(
     signedInName: String?,
     onGoogleLogin: () -> Unit,
     onFacebookLogin: () -> Unit,
-    onSignOut: () -> Unit
+    onSignOut: () -> Unit,
+    onEmailLogin: (String, String) -> Unit,
+    onCreateAccount: (String, String) -> Unit,
+    onPasswordReset: (String) -> Unit
 ) {
     val context = LocalContext.current
     val prefs = remember(context) { context.getSharedPreferences("madi_music_preferences", Context.MODE_PRIVATE) }
@@ -252,7 +313,8 @@ private fun MadiMusic(
                     3 -> TrackListPage("الأغاني المفضلة", "الأغاني التي حفظتها بقلبك", tracks.indices.filter { favorites.contains(tracks[it].id) }, tracks, selectedIndex, favorites, { id -> if (favorites.contains(id)) favorites.remove(id) else favorites.add(id) }, ::play)
                     5 -> NowPlayingPage(current, playing, { page = 0 }, { if (playing) { player?.pause(); playing = false } else { if (player?.currentMediaItem == null) play(selectedIndex) else { player?.play(); playing = true } } }, ::play, selectedIndex, tracks.lastIndex, { showEqualizer = true })
                     else -> SettingsPage(
-                        signedInName, onGoogleLogin, onFacebookLogin, onSignOut
+                        signedInName, onGoogleLogin, onFacebookLogin, onSignOut,
+                        onEmailLogin, onCreateAccount, onPasswordReset
                     )
                 }
             }
@@ -641,9 +703,16 @@ private fun SettingsPage(
     signedInName: String?,
     onGoogleLogin: () -> Unit,
     onFacebookLogin: () -> Unit,
-    onSignOut: () -> Unit
+    onSignOut: () -> Unit,
+    onEmailLogin: (String, String) -> Unit,
+    onCreateAccount: (String, String) -> Unit,
+    onPasswordReset: (String) -> Unit
 ) {
     val context = LocalContext.current
+    var accountEmail by remember { mutableStateOf("") }
+    var accountPassword by remember { mutableStateOf("") }
+    var showCreateAccount by remember { mutableStateOf(false) }
+    var showResetPassword by remember { mutableStateOf(false) }
     val version = remember {
         try { context.packageManager.getPackageInfo(context.packageName, 0).versionName ?: "1.1" }
         catch (_: Exception) { "1.1" }
@@ -686,8 +755,20 @@ private fun SettingsPage(
         item {
             SettingsSection("الحساب", "إدارة اتصالك بحساب Madi Music") {
                 if (signedInName == null) {
-                    Text("استمع دون حساب، أو سجّل الدخول لاستخدام حسابك.", color = Muted, fontSize = 11.sp)
+                    Text("استمع دون حساب، أو اربط حسابك لحفظ تسجيل الدخول.", color = Muted, fontSize = 11.sp)
                     Spacer(Modifier.height(10.dp))
+                    OutlinedTextField(value = accountEmail, onValueChange = { accountEmail = it }, modifier = Modifier.fillMaxWidth(), singleLine = true, label = { Text("البريد الإلكتروني") },
+                        keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Email),
+                        shape = RoundedCornerShape(14.dp), colors = OutlinedTextFieldDefaults.colors(focusedTextColor = Color.White, unfocusedTextColor = Color.White, focusedBorderColor = Violet, unfocusedBorderColor = Color(0xFF49365D), focusedLabelColor = Violet, unfocusedLabelColor = Muted, cursorColor = Violet))
+                    OutlinedTextField(value = accountPassword, onValueChange = { accountPassword = it }, modifier = Modifier.fillMaxWidth(), singleLine = true, label = { Text("كلمة المرور") },
+                        visualTransformation = androidx.compose.ui.text.input.PasswordVisualTransformation(),
+                        keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Password),
+                        shape = RoundedCornerShape(14.dp), colors = OutlinedTextFieldDefaults.colors(focusedTextColor = Color.White, unfocusedTextColor = Color.White, focusedBorderColor = Violet, unfocusedBorderColor = Color(0xFF49365D), focusedLabelColor = Violet, unfocusedLabelColor = Muted, cursorColor = Violet))
+                    Button(onClick = { onEmailLogin(accountEmail, accountPassword) }, modifier = Modifier.fillMaxWidth(), colors = ButtonDefaults.buttonColors(containerColor = Violet), shape = RoundedCornerShape(14.dp)) { Text("تسجيل الدخول بالبريد", fontWeight = FontWeight.Bold) }
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                        TextButton(onClick = { showCreateAccount = true }) { Text("إنشاء حساب جديد", color = Violet) }
+                        TextButton(onClick = { showResetPassword = true }) { Text("نسيت كلمة المرور؟", color = Violet) }
+                    }
                     Button(onClick = onGoogleLogin, modifier = Modifier.fillMaxWidth(), colors = ButtonDefaults.buttonColors(containerColor = Color.White, contentColor = Color(0xFF241B31)), shape = RoundedCornerShape(14.dp)) {
                         Text("G   المتابعة باستخدام Google", fontWeight = FontWeight.Bold)
                     }
@@ -738,6 +819,41 @@ private fun SettingsPage(
         item {
             Text("صُنع بكل شغف على يد شاب ليبي من ضواحي بنغازي  •  M + K = 78 ❤️", Modifier.fillMaxWidth().padding(top = 3.dp), color = Color(0xFF8F829E), fontSize = 9.sp, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
         }
+    }
+    if (showCreateAccount) {
+        AlertDialog(
+            onDismissRequest = { showCreateAccount = false },
+            title = { Text("إنشاء حساب جديد", color = Color.White) },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Text("أنشئ حسابك بالبريد الإلكتروني. سنرسل إليك رسالة للتحقق من عنوانك.", color = Muted)
+                    OutlinedTextField(value = accountEmail, onValueChange = { accountEmail = it }, label = { Text("البريد الإلكتروني") }, singleLine = true,
+                        keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Email))
+                    OutlinedTextField(value = accountPassword, onValueChange = { accountPassword = it }, label = { Text("كلمة المرور (6 أحرف على الأقل)") }, singleLine = true,
+                        visualTransformation = androidx.compose.ui.text.input.PasswordVisualTransformation(),
+                        keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Password))
+                }
+            },
+            confirmButton = { TextButton(onClick = { onCreateAccount(accountEmail, accountPassword); showCreateAccount = false }) { Text("إنشاء الحساب", color = Violet) } },
+            dismissButton = { TextButton(onClick = { showCreateAccount = false }) { Text("إلغاء", color = Muted) } },
+            containerColor = Panel, titleContentColor = Color.White, textContentColor = Muted
+        )
+    }
+    if (showResetPassword) {
+        AlertDialog(
+            onDismissRequest = { showResetPassword = false },
+            title = { Text("استعادة كلمة المرور", color = Color.White) },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Text("أدخل بريدك الإلكتروني وسنرسل لك رابطاً آمناً لإعادة تعيين كلمة المرور.", color = Muted)
+                    OutlinedTextField(value = accountEmail, onValueChange = { accountEmail = it }, label = { Text("البريد الإلكتروني") }, singleLine = true,
+                        keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Email))
+                }
+            },
+            confirmButton = { TextButton(onClick = { onPasswordReset(accountEmail); showResetPassword = false }) { Text("إرسال رابط الاستعادة", color = Violet) } },
+            dismissButton = { TextButton(onClick = { showResetPassword = false }) { Text("إلغاء", color = Muted) } },
+            containerColor = Panel, titleContentColor = Color.White, textContentColor = Muted
+        )
     }
 }
 

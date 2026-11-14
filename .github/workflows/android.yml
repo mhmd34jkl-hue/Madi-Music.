@@ -224,6 +224,29 @@ jobs:
           if app is None: raise SystemExit('AndroidManifest.xml has no application element')
           app.set(ns+'icon','@mipmap/ic_launcher')
           app.set(ns+'roundIcon','@mipmap/ic_launcher_round')
+          permissions = [
+              'android.permission.INTERNET',
+              'android.permission.FOREGROUND_SERVICE',
+              'android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK',
+              'android.permission.POST_NOTIFICATIONS'
+          ]
+          for permission in permissions:
+              if not any(node.get(ns+'name') == permission for node in root.findall('uses-permission')):
+                  root.insert(0, ET.Element('uses-permission', {ns+'name': permission}))
+          service = next((node for node in app.findall('service') if (node.get(ns+'name') or '').endswith('MusicPlaybackService')), None)
+          if service is None:
+              service = ET.SubElement(app, 'service')
+          service.set(ns+'name', '.MusicPlaybackService')
+          service.set(ns+'exported', 'true')
+          service.set(ns+'foregroundServiceType', 'mediaPlayback')
+          has_action = any(
+              action.get(ns+'name') == 'androidx.media3.session.MediaSessionService'
+              for filt in service.findall('intent-filter')
+              for action in filt.findall('action')
+          )
+          if not has_action:
+              filt = ET.SubElement(service, 'intent-filter')
+              ET.SubElement(filt, 'action', {ns+'name': 'androidx.media3.session.MediaSessionService'})
           tree.write(p, encoding='utf-8', xml_declaration=True)
           print('Manifest launcher icon attributes verified')
           PY

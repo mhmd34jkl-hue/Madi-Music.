@@ -2,7 +2,7 @@ name: Build Madi Music APK
 
 on:
   push:
-    branches: [madi-ui-upgrade, feature/firebase-auth]
+    branches: [madi-ui-upgrade, feature/firebase-auth, feature/madi-covers-login-icon-20261114]
   workflow_dispatch:
   release:
     types: [published]

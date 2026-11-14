@@ -321,7 +321,8 @@ jobs:
           test -s "iPhone.ttf" || { echo 'Uploaded iPhone.ttf is missing from repository root'; exit 1; }
           cp "iPhone.ttf" "$FONT_DIR/iphone.ttf"
           test -s "$FONT_DIR/iphone.ttf"
-          echo "Installed user-uploaded iPhone.ttf as the fixed app font"
+          grep -q "R.font.iphone" overrides/MainActivity.kt
+          echo "Installed user-uploaded iPhone.ttf and verified the fixed Compose font reference"
 
       - name: Build debug APK
         run: gradle -p "$PROJECT_DIR" assembleDebug

@@ -159,7 +159,7 @@ private fun MadiMusic(
     val context = LocalContext.current
     val prefs = remember(context) { context.getSharedPreferences("madi_music_preferences", Context.MODE_PRIVATE) }
     // Madi Music typography is fixed: users cannot switch the app font.
-    val appFont = FontFamily(Font(R.font.inter))
+    val appFont = FontFamily(Font(R.font.iphone))
     var showIntro by remember { mutableStateOf(true) }
     LaunchedEffect(Unit) {
         delay(2800)

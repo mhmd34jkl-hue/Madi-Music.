@@ -88,12 +88,19 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun startGoogleLogin() {
-        runCatching {
+        try {
+            val webClientId = getString(R.string.default_web_client_id)
+            if (webClientId.isBlank()) {
+                Toast.makeText(this, "إعداد Google ناقص: Web Client ID غير موجود", Toast.LENGTH_LONG).show()
+                return
+            }
             val options = GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
-                .requestIdToken(getString(R.string.default_web_client_id)).requestEmail().build()
+                .requestIdToken(webClientId)
+                .requestEmail()
+                .build()
             startActivityForResult(GoogleSignIn.getClient(this, options).signInIntent, 7101)
-        }.onFailure {
-            Toast.makeText(this, "تعذر بدء تسجيل Google. تحقق من إعداد Firebase.", Toast.LENGTH_LONG).show()
+        } catch (error: Exception) {
+            Toast.makeText(this, "تعذر فتح Google: ${error.localizedMessage ?: error.javaClass.simpleName}", Toast.LENGTH_LONG).show()
         }
     }
 
@@ -156,36 +163,50 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun startFacebookLogin() {
-        val provider = OAuthProvider.newBuilder("facebook.com")
-        provider.addCustomParameter("display", "popup")
-        auth.startActivityForSignInWithProvider(this, provider.build())
-            .addOnSuccessListener { result ->
-                signedInName = result.user?.displayName ?: result.user?.email ?: "حساب متصل"
-                Toast.makeText(this, "تم تسجيل الدخول بنجاح", Toast.LENGTH_SHORT).show()
-            }
-            .addOnFailureListener { error ->
-                Toast.makeText(this, "تعذر تسجيل Facebook: ${error.localizedMessage ?: "حاول مرة أخرى"}", Toast.LENGTH_LONG).show()
-            }
+        try {
+            val provider = OAuthProvider.newBuilder("facebook.com")
+            // Let Firebase use its Android OAuth redirect flow; do not force a browser popup.
+            auth.startActivityForSignInWithProvider(this, provider.build())
+                .addOnSuccessListener { result ->
+                    signedInName = result.user?.displayName ?: result.user?.email ?: "حساب متصل"
+                    Toast.makeText(this, "تم تسجيل الدخول عبر Facebook", Toast.LENGTH_SHORT).show()
+                }
+                .addOnFailureListener { error ->
+                    Toast.makeText(this, "تعذر تسجيل Facebook: ${error.localizedMessage ?: error.javaClass.simpleName}", Toast.LENGTH_LONG).show()
+                }
+        } catch (error: Exception) {
+            Toast.makeText(this, "تعذر فتح تسجيل Facebook: ${error.localizedMessage ?: error.javaClass.simpleName}", Toast.LENGTH_LONG).show()
+        }
     }
 
     @Deprecated("Deprecated by Android, retained for Google Sign-In compatibility")
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
-        if (requestCode == 7101 && resultCode == Activity.RESULT_OK) {
-            runCatching {
-                GoogleSignIn.getSignedInAccountFromIntent(data).getResult(ApiException::class.java)
-            }.onSuccess { account ->
-                val credential = GoogleAuthProvider.getCredential(account.idToken, null)
+        if (requestCode == 7101) {
+            if (resultCode != Activity.RESULT_OK) {
+                Toast.makeText(this, "تم إلغاء تسجيل Google أو لم تكتمل نافذته", Toast.LENGTH_LONG).show()
+                return
+            }
+            try {
+                val account = GoogleSignIn.getSignedInAccountFromIntent(data).getResult(ApiException::class.java)
+                val idToken = account.idToken
+                if (idToken.isNullOrBlank()) {
+                    Toast.makeText(this, "Google لم يُرجع رمز الدخول. تحقق من Web Client ID وبصمة SHA-1 في Firebase.", Toast.LENGTH_LONG).show()
+                    return
+                }
+                val credential = GoogleAuthProvider.getCredential(idToken, null)
                 auth.signInWithCredential(credential)
                     .addOnSuccessListener { result ->
                         signedInName = result.user?.displayName ?: result.user?.email ?: "حساب متصل"
                         Toast.makeText(this, "تم تسجيل الدخول عبر Google", Toast.LENGTH_SHORT).show()
                     }
-                    .addOnFailureListener {
-                        Toast.makeText(this, "تعذر إكمال تسجيل Google", Toast.LENGTH_LONG).show()
+                    .addOnFailureListener { error ->
+                        Toast.makeText(this, "رفض Firebase تسجيل Google: ${error.localizedMessage ?: "تحقق من إعدادات OAuth"}", Toast.LENGTH_LONG).show()
                     }
-            }.onFailure {
-                Toast.makeText(this, "لم يكتمل تسجيل Google", Toast.LENGTH_LONG).show()
+            } catch (error: ApiException) {
+                Toast.makeText(this, "فشل Google (رمز ${error.statusCode}): ${error.localizedMessage ?: "تحقق من إعداد OAuth وSHA-1"}", Toast.LENGTH_LONG).show()
+            } catch (error: Exception) {
+                Toast.makeText(this, "لم يكتمل تسجيل Google: ${error.localizedMessage ?: error.javaClass.simpleName}", Toast.LENGTH_LONG).show()
             }
         }
     }

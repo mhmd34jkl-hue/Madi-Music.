@@ -13,6 +13,9 @@ import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.ui.draw.clip
+import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -750,13 +753,21 @@ private fun SettingsPage(
                         Text("مركز التحكم", color = Color.White, fontSize = 28.sp, fontWeight = FontWeight.Black)
                         Text("كل تفاصيل تجربتك في مكان واحد", color = Muted, fontSize = 12.sp)
                     }
-                    Box(Modifier.size(48.dp).background(Brush.linearGradient(listOf(Color(0xFF8F3BC5), Color(0xFF302044))), RoundedCornerShape(16.dp)), contentAlignment = Alignment.Center) {
-                        Text("⚙", color = Color.White, fontSize = 25.sp)
+                    Box(
+                        Modifier.size(50.dp)
+                            .background(Brush.linearGradient(listOf(Color(0xFFB34DFF), Color(0xFF42205E), Color(0xFF17101F))), RoundedCornerShape(17.dp))
+                            .border(1.dp, Color(0xFF9C5CC6), RoundedCornerShape(17.dp)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text("⚙", color = Color.White, fontSize = 25.sp, fontWeight = FontWeight.Bold)
                     }
                 }
                 Spacer(Modifier.height(16.dp))
                 Row(
-                    Modifier.fillMaxWidth().background(Brush.linearGradient(listOf(Color(0xFF64308A), Color(0xFF2B1B40), Color(0xFF17121F))), RoundedCornerShape(23.dp)).padding(16.dp),
+                    Modifier.fillMaxWidth()
+                        .background(Brush.linearGradient(listOf(Color(0xFF7136A0), Color(0xFF2B1B40), Color(0xFF111019))), RoundedCornerShape(23.dp))
+                        .border(1.dp, Color(0xFF75439A), RoundedCornerShape(23.dp))
+                        .padding(16.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Box(Modifier.size(52.dp).background(Color(0x33FFFFFF), RoundedCornerShape(17.dp)), contentAlignment = Alignment.Center) {
@@ -976,11 +987,18 @@ private fun SettingsSection(
     content: @Composable ColumnScope.() -> Unit
 ) {
     Column(
-        Modifier.fillMaxWidth().background(Panel, RoundedCornerShape(21.dp)).padding(15.dp)
+        Modifier.fillMaxWidth()
+            .background(
+                Brush.linearGradient(listOf(Color(0xFF191323), Color(0xFF100D18), Color(0xFF17101F))),
+                RoundedCornerShape(23.dp)
+            )
+            .then(Modifier.border(1.dp, Color(0xFF4B2D68), RoundedCornerShape(23.dp)))
+            .animateContentSize()
+            .padding(16.dp)
     ) {
         Text(title, color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.ExtraBold)
-        Text(subtitle, color = Muted, fontSize = 10.sp)
-        Spacer(Modifier.height(8.dp))
+        Text(subtitle, color = Color(0xFFB7A9C7), fontSize = 10.sp)
+        Spacer(Modifier.height(9.dp))
         content()
     }
 }
@@ -994,26 +1012,31 @@ private fun SettingsRow(
     onClick: () -> Unit
 ) {
     Row(
-        Modifier.fillMaxWidth().clickable(onClick = onClick).padding(vertical = 10.dp),
+        Modifier.fillMaxWidth()
+            .clip(RoundedCornerShape(15.dp))
+            .clickable(onClick = onClick)
+            .padding(vertical = 9.dp, horizontal = 3.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Box(
-            Modifier.size(39.dp).background(Color(0xFF30213F), RoundedCornerShape(13.dp)),
+            Modifier.size(41.dp)
+                .background(Brush.linearGradient(listOf(Color(0xFF6E32A0), Color(0xFF251735))), RoundedCornerShape(14.dp))
+                .border(1.dp, Color(0xFF8051A2), RoundedCornerShape(14.dp)),
             contentAlignment = Alignment.Center
         ) {
-            Text(symbol, color = Color(0xFFE1C2FF), fontSize = 18.sp, fontWeight = FontWeight.Bold)
+            Text(symbol, color = Color(0xFFF0DEFF), fontSize = 18.sp, fontWeight = FontWeight.Bold)
         }
-        Spacer(Modifier.width(11.dp))
+        Spacer(Modifier.width(12.dp))
         Column(Modifier.weight(1f)) {
             Text(title, color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
-            Text(subtitle, color = Muted, fontSize = 10.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(subtitle, color = Color(0xFFB7A9C7), fontSize = 10.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
         if (tag != null) {
-            Surface(color = Color(0x332B1746), shape = RoundedCornerShape(20.dp)) {
-                Text(tag, Modifier.padding(horizontal = 9.dp, vertical = 5.dp), color = Color(0xFFD3B3F4), fontSize = 9.sp)
+            Surface(color = Color(0xFF30203F), shape = RoundedCornerShape(20.dp)) {
+                Text(tag, Modifier.padding(horizontal = 9.dp, vertical = 5.dp), color = Color(0xFFE0C5FF), fontSize = 9.sp)
             }
         } else {
-            Text("›", color = Color(0xFF8D7A9F), fontSize = 22.sp, modifier = Modifier.padding(horizontal = 5.dp))
+            Text("›", color = Color(0xFFB28AD2), fontSize = 23.sp, modifier = Modifier.padding(horizontal = 6.dp))
         }
     }
 }

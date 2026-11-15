@@ -370,7 +370,7 @@ private fun MadiMusic(
             }
 
             Box(Modifier.weight(1f).fillMaxWidth()) {
-                Crossfade(targetState = page, animationSpec = tween(durationMillis = 180), label = "madi-page-transition") { targetPage ->
+                Crossfade(targetState = page, animationSpec = tween(durationMillis = 240, easing = FastOutSlowInEasing), label = "madi-page-transition") { targetPage ->
                 when (targetPage) {
                     0 -> HomePage(
                         query, { query = it }, artistFilter, { artistFilter = it },
@@ -695,7 +695,7 @@ private fun ArtistAlbumsPage(
                 Text("♫", color = Color(0xFFD8B4FF), fontSize = 26.sp)
             }
         }
-        items(albums.size, key = { index -> albums[index].artist }) { index ->
+        items(albums.size, key = { index -> albums[index].artist }, contentType = { "artist-album" }) { index ->
             val album = albums[index]
             Row(
                 Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp))
@@ -805,7 +805,7 @@ private fun HomePage(
         if (filtered.isEmpty()) {
             item { Text("لا توجد نتائج مطابقة. جرّب اسماً آخر.", color = Muted, modifier = Modifier.padding(vertical = 22.dp)) }
         } else {
-            itemsIndexed(filtered, key = { _, pair -> tracks[pair.first].id }) { _, pair ->
+            itemsIndexed(filtered, key = { _, pair -> tracks[pair.first].id }, contentType = { _, _ -> "track-row" }) { _, pair ->
                 val index = pair.first
                 TrackRow(
                     index, tracks[index], selected,
@@ -926,7 +926,7 @@ private fun SearchPage(
         } else {
             Text("${results.size} نتيجة", color = Muted, fontSize = 12.sp)
             LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                itemsIndexed(results, key = { _, trackIndex -> tracks[trackIndex].id }) { _, index ->
+                itemsIndexed(results, key = { _, trackIndex -> tracks[trackIndex].id }, contentType = { _, _ -> "track-row" }) { _, index ->
                     TrackRow(index, tracks[index], selected, favorites.contains(tracks[index].id), { onPlay(index) }, { onFavorite(tracks[index].id) })
                 }
             }
@@ -953,7 +953,7 @@ private fun TrackListPage(
             Text("لا توجد أغاني هنا بعد. أضف الأغاني إلى المفضلة من المكتبة.", color = Muted, modifier = Modifier.padding(top = 20.dp))
         } else {
             LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                itemsIndexed(indices, key = { _, trackIndex -> tracks[trackIndex].id }) { _, index ->
+                itemsIndexed(indices, key = { _, trackIndex -> tracks[trackIndex].id }, contentType = { _, _ -> "track-row" }) { _, index ->
                     TrackRow(index, tracks[index], selected, favorites.contains(tracks[index].id), { onPlay(index) }, { onFavorite(tracks[index].id) })
                 }
             }

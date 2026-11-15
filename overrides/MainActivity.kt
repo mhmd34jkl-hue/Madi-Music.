@@ -26,6 +26,8 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Favorite
@@ -44,6 +46,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
@@ -51,6 +54,9 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.Font
 import androidx.compose.material3.LocalTextStyle
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.delay
@@ -247,7 +253,7 @@ private fun MadiMusic(
     val context = LocalContext.current
     val prefs = remember(context) { context.getSharedPreferences("madi_music_preferences", Context.MODE_PRIVATE) }
     // Madi Music typography is fixed: users cannot switch the app font.
-    val appFont = FontFamily(Font(R.font.iphone))
+    val appFont = FontFamily(Font(R.font.iphone), Font(R.font.ios_emoji))
     var showIntro by remember { mutableStateOf(true) }
     var showLogin by remember { mutableStateOf(signedInName.isNullOrBlank()) }
     LaunchedEffect(Unit) {
@@ -268,7 +274,6 @@ private fun MadiMusic(
                     onGoogleLogin = onGoogleLogin,
                     onFacebookLogin = onFacebookLogin,
                     onEmailLogin = onEmailLogin,
-                    onCreateAccount = onCreateAccount,
                     onPasswordReset = onPasswordReset,
                     onGuest = { showLogin = false }
                 )
@@ -284,7 +289,6 @@ private fun MadiMusic(
     val favorites = remember { mutableStateListOf<String>() }
     val tracks = MusicCatalog.tracks
     val current = tracks[selectedIndex]
-    val artists = listOf("الكل") + tracks.map { it.artist }.distinct()
 
     DisposableEffect(player) {
         val listener = object : Player.Listener {
@@ -347,8 +351,8 @@ private fun MadiMusic(
                 when (page) {
                     0 -> HomePage(
                         query, { query = it }, artistFilter, { artistFilter = it },
-                        artists, tracks.mapIndexed { index, track -> index to track.title },
-                        tracks.map { it.artist }, selectedIndex, favorites,
+                        tracks.mapIndexed { index, track -> index to track.title },
+                        selectedIndex, favorites,
                         { id -> if (favorites.contains(id)) favorites.remove(id) else favorites.add(id) }, ::play,
                         onSearch = { page = 1 }
                     )
@@ -483,110 +487,108 @@ private fun MadiLoginScreen(
     onGoogleLogin: () -> Unit,
     onFacebookLogin: () -> Unit,
     onEmailLogin: (String, String) -> Unit,
-    onCreateAccount: (String, String) -> Unit,
     onPasswordReset: (String) -> Unit,
     onGuest: () -> Unit
 ) {
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
-    var createMode by remember { mutableStateOf(false) }
-    Box(
-        Modifier.fillMaxSize().background(
-            Brush.radialGradient(listOf(Color(0xFF392052), Color(0xFF130D1D), Color(0xFF050509)), radius = 1050f)
-        ).statusBarsPadding().padding(horizontal = 24.dp, vertical = 18.dp)
-    ) {
-        Text(
-            "تخطي",
-            Modifier.align(Alignment.TopEnd).clickable(onClick = onGuest).padding(10.dp),
-            color = Color(0xFFD9B6FF), fontSize = 14.sp, fontWeight = FontWeight.Bold
+    BoxWithConstraints(Modifier.fillMaxSize().background(Night)) {
+        val screenWidth = maxWidth
+        val screenHeight = maxHeight
+        Image(
+            painter = painterResource(R.drawable.login_screen_reference),
+            contentDescription = "شاشة تسجيل الدخول الأصلية لتطبيق Madi Music",
+            modifier = Modifier.fillMaxSize(),
+            contentScale = ContentScale.FillBounds
         )
-        Column(
-            Modifier.fillMaxWidth().align(Alignment.Center).verticalScroll(rememberScrollState()),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            Box(
-                Modifier.size(92.dp).background(
-                    Brush.linearGradient(listOf(Violet, Color(0xFF49236D), Color(0xFF17101F))),
-                    RoundedCornerShape(27.dp)
-                ),
-                contentAlignment = Alignment.Center
-            ) {
-                Text("M", color = Color.White, fontSize = 62.sp, fontWeight = FontWeight.Black)
-                Text("♛", Modifier.align(Alignment.TopCenter).offset(y = (-8).dp), color = Color(0xFFE7D9F5), fontSize = 23.sp)
-            }
-            Spacer(Modifier.height(18.dp))
-            Text("مرحباً بك في MADI MUSIC", color = Color.White, fontSize = 23.sp, fontWeight = FontWeight.ExtraBold)
-            Text("سجّل دخولك واستمتع بموسيقاك في كل مكان", color = Muted, fontSize = 12.sp)
-            Spacer(Modifier.height(25.dp))
-            OutlinedButton(onClick = onGoogleLogin, modifier = Modifier.fillMaxWidth().height(52.dp), shape = RoundedCornerShape(15.dp)) {
-                Text("متابعة باستخدام Google", color = Color.White, fontWeight = FontWeight.Bold)
-            }
-            Spacer(Modifier.height(9.dp))
-            OutlinedButton(onClick = onFacebookLogin, modifier = Modifier.fillMaxWidth().height(52.dp), shape = RoundedCornerShape(15.dp)) {
-                Text("متابعة باستخدام Facebook", color = Color.White, fontWeight = FontWeight.Bold)
-            }
-            Spacer(Modifier.height(15.dp))
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Box(Modifier.weight(1f).height(1.dp).background(Color(0x554C3A5D)))
-                Text("  أو بالبريد الإلكتروني  ", color = Muted, fontSize = 11.sp)
-                Box(Modifier.weight(1f).height(1.dp).background(Color(0x554C3A5D)))
-            }
-            Spacer(Modifier.height(13.dp))
-            OutlinedTextField(
-                value = email, onValueChange = { email = it }, modifier = Modifier.fillMaxWidth(),
-                label = { Text("البريد الإلكتروني") }, singleLine = true,
-                shape = RoundedCornerShape(14.dp), colors = OutlinedTextFieldDefaults.colors(
-                    focusedBorderColor = Violet, unfocusedBorderColor = Color(0x665D4A70),
-                    focusedLabelColor = Color(0xFFD9B6FF), unfocusedLabelColor = Muted,
-                    focusedTextColor = Color.White, unfocusedTextColor = Color.White, cursorColor = Violet
-                )
-            )
-            Spacer(Modifier.height(9.dp))
-            OutlinedTextField(
-                value = password, onValueChange = { password = it }, modifier = Modifier.fillMaxWidth(),
-                label = { Text("كلمة المرور") }, singleLine = true,
-                visualTransformation = androidx.compose.ui.text.input.PasswordVisualTransformation(),
-                shape = RoundedCornerShape(14.dp), colors = OutlinedTextFieldDefaults.colors(
-                    focusedBorderColor = Violet, unfocusedBorderColor = Color(0x665D4A70),
-                    focusedLabelColor = Color(0xFFD9B6FF), unfocusedLabelColor = Muted,
-                    focusedTextColor = Color.White, unfocusedTextColor = Color.White, cursorColor = Violet
-                )
-            )
-            Text(
-                "نسيت كلمة المرور؟",
-                Modifier.align(Alignment.End).clickable { onPasswordReset(email) }.padding(top = 9.dp, bottom = 12.dp),
-                color = Color(0xFFD9B6FF), fontSize = 11.sp
-            )
-            Button(
-                onClick = { if (createMode) onCreateAccount(email, password) else onEmailLogin(email, password) },
-                modifier = Modifier.fillMaxWidth().height(52.dp),
-                shape = RoundedCornerShape(15.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = Violet)
-            ) {
-                Text(if (createMode) "إنشاء حساب" else "تسجيل الدخول", color = Color.White, fontWeight = FontWeight.Bold)
-            }
-            TextButton(onClick = { createMode = !createMode }) {
-                Text(if (createMode) "لديك حساب؟ سجّل الدخول" else "ليس لديك حساب؟ أنشئ حساباً", color = Color(0xFFD9B6FF), fontSize = 12.sp)
-            }
-        }
-        Text(
-            "يمكنك التخطي والاستماع دون إنترنت",
-            Modifier.align(Alignment.BottomCenter).padding(bottom = 12.dp),
-            color = Muted, fontSize = 10.sp
+
+        BasicTextField(
+            value = email,
+            onValueChange = { email = it },
+            singleLine = true,
+            textStyle = LocalTextStyle.current.copy(
+                color = Color.White, fontSize = 15.sp, textAlign = TextAlign.Start
+            ),
+            cursorBrush = SolidColor(Violet),
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
+            modifier = Modifier
+                .offset(x = screenWidth * 0.20f, y = screenHeight * 0.493f)
+                .width(screenWidth * 0.60f)
+                .height(screenHeight * 0.052f)
+                .padding(horizontal = 5.dp, vertical = 9.dp)
+        )
+        BasicTextField(
+            value = password,
+            onValueChange = { password = it },
+            singleLine = true,
+            visualTransformation = PasswordVisualTransformation(),
+            textStyle = LocalTextStyle.current.copy(
+                color = Color.White, fontSize = 15.sp, textAlign = TextAlign.Start
+            ),
+            cursorBrush = SolidColor(Violet),
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+            modifier = Modifier
+                .offset(x = screenWidth * 0.20f, y = screenHeight * 0.568f)
+                .width(screenWidth * 0.60f)
+                .height(screenHeight * 0.052f)
+                .padding(horizontal = 5.dp, vertical = 9.dp)
+        )
+
+        Box(
+            Modifier.offset(x = screenWidth * 0.07f, y = screenHeight * 0.633f)
+                .width(screenWidth * 0.86f).height(screenHeight * 0.068f)
+                .clickable { onEmailLogin(email, password) }
+        )
+        Box(
+            Modifier.offset(x = screenWidth * 0.075f, y = screenHeight * 0.749f)
+                .width(screenWidth * 0.41f).height(screenHeight * 0.066f)
+                .clickable(onClick = onGoogleLogin)
+        )
+        Box(
+            Modifier.offset(x = screenWidth * 0.52f, y = screenHeight * 0.749f)
+                .width(screenWidth * 0.41f).height(screenHeight * 0.066f)
+                .clickable(onClick = onFacebookLogin)
+        )
+        Box(
+            Modifier.offset(x = screenWidth * 0.17f, y = screenHeight * 0.862f)
+                .width(screenWidth * 0.66f).height(screenHeight * 0.045f)
+                .clickable { onPasswordReset(email) }
+        )
+        // The play control already drawn in the reference image doubles as guest entry,
+        // preserving offline access without adding an extra button to the design.
+        Box(
+            Modifier.offset(x = screenWidth * 0.405f, y = screenHeight * 0.905f)
+                .width(screenWidth * 0.19f).height(screenHeight * 0.085f)
+                .clickable(onClick = onGuest)
         )
     }
 }
 
 @Composable
+private data class ArtistAlbum(
+    val artist: String,
+    val portraitResourceName: String,
+    val songCount: Int
+)
+
+@Composable
 private fun HomePage(
     query: String, onQuery: (String) -> Unit, artistFilter: String, onArtist: (String) -> Unit,
-    artists: List<String>, indexedTitles: List<Pair<Int, String>>, artistNames: List<String>,
+    indexedTitles: List<Pair<Int, String>>,
     selected: Int, favorites: List<String>, onFavorite: (String) -> Unit, onPlay: (Int) -> Unit, onSearch: () -> Unit
 ) {
     val tracks = MusicCatalog.tracks
+    val albums = listOf(
+        ArtistAlbum("الشاب عقيل", "artist_cheb_akil", tracks.count { it.artist == "الشاب عقيل" }),
+        ArtistAlbum("الشاب مومو", "artist_cheb_momo", tracks.count { it.artist == "الشاب مومو" }),
+        ArtistAlbum("جندي الراب", "artist_aljundi", tracks.count { it.artist == "جندي الراب" }),
+        ArtistAlbum("رافع العكعوكي", "artist_rafea_alakoky", tracks.count { it.artist.contains("رافع") }),
+        ArtistAlbum("كولومبي", "artist_colomby", tracks.count { it.artist == "كولمبي" })
+    )
     val filtered = indexedTitles.filter { pair ->
         val track = tracks[pair.first]
-        (artistFilter == "الكل" || track.artist == artistFilter) &&
+        (artistFilter == "الكل" || track.artist == artistFilter ||
+            (artistFilter == "رافع العكعوكي" && track.artist.contains("رافع"))) &&
             (query.isBlank() || track.title.contains(query, true) || track.artist.contains(query, true))
     }
     LazyColumn(
@@ -603,9 +605,7 @@ private fun HomePage(
                 Spacer(Modifier.height(12.dp))
                 Box(
                     Modifier.fillMaxWidth().background(
-                        Brush.linearGradient(
-                            listOf(Color(0xFF7130A0), Color(0xFF34204F), Color(0xFF14111E))
-                        ),
+                        Brush.linearGradient(listOf(Color(0xFF7130A0), Color(0xFF34204F), Color(0xFF14111E))),
                         RoundedCornerShape(24.dp)
                     ).padding(18.dp)
                 ) {
@@ -613,10 +613,7 @@ private fun HomePage(
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Text("MADI MUSIC", color = Color(0xFFF0E4FF), fontSize = 10.sp, fontWeight = FontWeight.Black, letterSpacing = 2.sp)
                             Spacer(Modifier.weight(1f))
-                            Surface(
-                                color = Color(0x3322D69A),
-                                shape = RoundedCornerShape(30.dp)
-                            ) {
+                            Surface(color = Color(0x3322D69A), shape = RoundedCornerShape(30.dp)) {
                                 Text("● OFFLINE", Modifier.padding(horizontal = 10.dp, vertical = 5.dp), color = Color(0xFF9AF0C9), fontSize = 9.sp, fontWeight = FontWeight.Bold)
                             }
                         }
@@ -633,27 +630,33 @@ private fun HomePage(
                         }
                     }
                 }
-                Spacer(Modifier.height(6.dp))
-                Text("الفنانون", color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Bold)
-                androidx.compose.foundation.lazy.LazyRow(horizontalArrangement = Arrangement.spacedBy(7.dp)) {
-                    items(artists.size) { i ->
-                        FilterChip(
-                            selected = artistFilter == artists[i],
-                            onClick = { onArtist(artists[i]) },
-                            label = { Text(artists[i], fontSize = 11.sp) },
-                            colors = FilterChipDefaults.filterChipColors(
-                                selectedContainerColor = Color(0xFF63318A),
-                                selectedLabelColor = Color.White,
-                                labelColor = Muted
-                            )
-                        )
+                Spacer(Modifier.height(8.dp))
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text("ألبومات الفنانين", color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.ExtraBold)
+                    Spacer(Modifier.weight(1f))
+                    TextButton(onClick = { onArtist("الكل") }, contentPadding = PaddingValues(0.dp)) {
+                        Text("عرض الكل", color = Color(0xFFD9B6FF), fontSize = 11.sp)
                     }
                 }
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text("كل الأغاني", color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.ExtraBold)
-                    Spacer(Modifier.weight(1f))
-                    Text("${filtered.size} أغنية", color = Muted, fontSize = 11.sp)
+            }
+        }
+        item {
+            androidx.compose.foundation.lazy.LazyRow(
+                horizontalArrangement = Arrangement.spacedBy(11.dp),
+                contentPadding = PaddingValues(end = 2.dp)
+            ) {
+                items(albums.size) { index ->
+                    ArtistAlbumCard(albums[index], artistFilter == albums[index].artist, {
+                        onArtist(albums[index].artist)
+                    })
                 }
+            }
+        }
+        item {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(if (artistFilter == "الكل") "كل الأغاني" else "أغاني " + artistFilter, color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.ExtraBold)
+                Spacer(Modifier.weight(1f))
+                Text("${filtered.size} أغنية", color = Muted, fontSize = 11.sp)
             }
         }
         if (filtered.isEmpty()) {
@@ -668,6 +671,43 @@ private fun HomePage(
                     { onFavorite(tracks[index].id) }
                 )
             }
+        }
+    }
+}
+
+@Composable
+private fun ArtistAlbumCard(album: ArtistAlbum, selected: Boolean, onClick: () -> Unit) {
+    val context = LocalContext.current
+    val portraitId = remember(album.portraitResourceName) {
+        context.resources.getIdentifier(album.portraitResourceName, "drawable", context.packageName)
+    }
+    Box(
+        Modifier.width(154.dp).height(184.dp)
+            .clip(RoundedCornerShape(20.dp))
+            .border(if (selected) 2.dp else 1.dp, if (selected) Violet else Color(0x664D3762), RoundedCornerShape(20.dp))
+            .clickable(onClick = onClick)
+    ) {
+        if (portraitId != 0) {
+            Image(
+                painter = painterResource(portraitId),
+                contentDescription = "صورة الفنان ${album.artist}",
+                modifier = Modifier.fillMaxSize(),
+                contentScale = ContentScale.Crop
+            )
+        } else {
+            Box(Modifier.fillMaxSize().background(Brush.linearGradient(listOf(Color(0xFF56306F), Color(0xFF17101F)))))
+        }
+        Box(
+            Modifier.fillMaxSize().background(
+                Brush.verticalGradient(listOf(Color.Transparent, Color(0x2206040A), Color(0xEE07050D)))
+            )
+        )
+        Column(
+            Modifier.align(Alignment.BottomStart).fillMaxWidth().padding(11.dp)
+        ) {
+            Text("ألبوم الفنان", color = Color(0xFFDCC2F4), fontSize = 9.sp, fontWeight = FontWeight.SemiBold)
+            Text(album.artist, color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.ExtraBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text("${album.songCount} أغنية", color = Color(0xFFE3D6EF), fontSize = 10.sp)
         }
     }
 }
@@ -842,7 +882,7 @@ private fun SearchField(value: String, onValue: (String) -> Unit, onSearch: () -
         onValueChange = onValue,
         modifier = Modifier.fillMaxWidth(),
         placeholder = { Text("ابحث عن أغنية أو فنان…", color = Muted) },
-        leadingIcon = { Icon(Icons.Default.Search, contentDescription = "بحث", tint = Muted) },
+        leadingIcon = { Text("🔍", color = Color(0xFFDCC2F4), fontSize = 22.sp) },
         singleLine = true,
         shape = RoundedCornerShape(16.dp),
         colors = OutlinedTextFieldDefaults.colors(

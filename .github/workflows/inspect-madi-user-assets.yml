@@ -1,0 +1,61 @@
+name: Inspect Madi user assets (no APK build)
+
+on:
+  push:
+    branches: [feature/madi-ui-polish-no-build]
+
+permissions:
+  contents: read
+
+jobs:
+  inspect-assets:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Inventory uploaded ZIP images and create contact sheet
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -s "New Folder.zip"
+          sudo apt-get update
+          sudo apt-get install -y python3-pil
+          mkdir -p inspected-assets
+          python3 - <<'PY'
+          import zipfile, pathlib, io
+          from PIL import Image, ImageOps, ImageDraw
+          z=zipfile.ZipFile("New Folder.zip")
+          rows=[]
+          for info in z.infolist():
+              if info.is_dir(): continue
+              p=pathlib.PurePosixPath(info.filename)
+              if p.suffix.lower() not in (".png",".jpg",".jpeg",".webp"): continue
+              try:
+                  im=Image.open(io.BytesIO(z.read(info))).convert("RGB")
+                  im.thumbnail((220,170))
+                  rows.append((info.filename,im.copy(),info.file_size))
+                  out=pathlib.Path("inspected-assets")/(f"{len(rows):02d}_"+p.name.replace("/","_"))
+                  out.write_bytes(z.read(info))
+              except Exception:
+                  pass
+          if not rows: raise SystemExit("No readable images found in New Folder.zip")
+          w,h=260,220
+          cols=3
+          sheet=Image.new("RGB",(cols*w,((len(rows)+cols-1)//cols)*h),(20,16,28))
+          draw=ImageDraw.Draw(sheet)
+          for i,(name,im,size) in enumerate(rows):
+              x=(i%cols)*w; y=(i//cols)*h
+              sheet.paste(im,(x+(w-im.width)//2,y+4))
+              label=name if len(name)<36 else name[:33]+"..."
+              draw.text((x+8,y+180),label,fill=(245,235,255))
+              draw.text((x+8,y+198),f"{im.width}x{im.height} | {size} bytes",fill=(180,165,195))
+          sheet.save("inspected-assets/contact-sheet.jpg",quality=90)
+          with open("inspected-assets/inventory.txt","w") as f:
+              for name,im,size in rows: f.write(f"{name}\t{im.width}x{im.height}\t{size}\n")
+          print("READABLE_IMAGES",len(rows))
+          for name,im,size in rows: print("IMAGE",name,im.size,size)
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: madi-user-assets-inspection
+          path: inspected-assets/
+          if-no-files-found: error

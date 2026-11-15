@@ -290,6 +290,7 @@ private fun MadiMusic(
                     onGoogleLogin = onGoogleLogin,
                     onFacebookLogin = onFacebookLogin,
                     onEmailLogin = onEmailLogin,
+                    onCreateAccount = onCreateAccount,
                     onPasswordReset = onPasswordReset,
                     onGuest = { showLogin = false }
                 )
@@ -604,13 +605,18 @@ private fun MadiLoginScreen(
     onGoogleLogin: () -> Unit,
     onFacebookLogin: () -> Unit,
     onEmailLogin: (String, String) -> Unit,
+    onCreateAccount: (String, String) -> Unit,
     onPasswordReset: (String) -> Unit,
     onGuest: () -> Unit
 ) {
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var passwordVisible by remember { mutableStateOf(false) }
+    var showCreateAccount by remember { mutableStateOf(false) }
+    var createAccountPassword by remember { mutableStateOf("") }
+    var confirmAccountPassword by remember { mutableStateOf("") }
     val focusManager = LocalFocusManager.current
+    val context = LocalContext.current
 
     BoxWithConstraints(Modifier.fillMaxSize().background(Night)) {
         val screenWidth = maxWidth
@@ -711,11 +717,84 @@ private fun MadiLoginScreen(
                 .width(screenWidth * 0.66f).height(screenHeight * 0.045f)
                 .clickable { onPasswordReset(email) }
         )
+        Text(
+            text = "إنشاء حساب جديد",
+            color = Color(0xFFE0C2FF),
+            fontSize = 11.sp,
+            fontWeight = FontWeight.SemiBold,
+            textAlign = TextAlign.Center,
+            modifier = Modifier.offset(x = screenWidth * 0.07f, y = screenHeight * 0.704f)
+                .width(screenWidth * 0.86f)
+                .height(screenHeight * 0.04f)
+                .clickable { showCreateAccount = true }
+                .padding(top = 2.dp)
+        )
         // The reference artwork's play control remains the guest/offline entry point.
         Box(
             Modifier.offset(x = screenWidth * 0.405f, y = screenHeight * 0.905f)
                 .width(screenWidth * 0.19f).height(screenHeight * 0.085f)
                 .clickable(onClick = onGuest)
+        )
+    }
+    if (showCreateAccount) {
+        AlertDialog(
+            onDismissRequest = { showCreateAccount = false },
+            title = { Text("إنشاء حساب جديد", color = Color.White) },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Text("أدخل بريدك الإلكتروني وأنشئ كلمة مرور لحساب Madi Music.", color = Muted)
+                    OutlinedTextField(
+                        value = email,
+                        onValueChange = { email = it },
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true,
+                        label = { Text("البريد الإلكتروني") },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email, imeAction = ImeAction.Next)
+                    )
+                    OutlinedTextField(
+                        value = createAccountPassword,
+                        onValueChange = { createAccountPassword = it },
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true,
+                        label = { Text("كلمة المرور (6 أحرف على الأقل)") },
+                        visualTransformation = PasswordVisualTransformation(),
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password, imeAction = ImeAction.Next)
+                    )
+                    OutlinedTextField(
+                        value = confirmAccountPassword,
+                        onValueChange = { confirmAccountPassword = it },
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true,
+                        label = { Text("تأكيد كلمة المرور") },
+                        visualTransformation = PasswordVisualTransformation(),
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password, imeAction = ImeAction.Done)
+                    )
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    when {
+                        email.isBlank() || !android.util.Patterns.EMAIL_ADDRESS.matcher(email.trim()).matches() ->
+                            Toast.makeText(context, "أدخل بريداً إلكترونياً صحيحاً", Toast.LENGTH_SHORT).show()
+                        createAccountPassword.length < 6 ->
+                            Toast.makeText(context, "كلمة المرور يجب أن تكون 6 أحرف على الأقل", Toast.LENGTH_SHORT).show()
+                        createAccountPassword != confirmAccountPassword ->
+                            Toast.makeText(context, "كلمتا المرور غير متطابقتين", Toast.LENGTH_SHORT).show()
+                        else -> {
+                            onCreateAccount(email.trim(), createAccountPassword)
+                            showCreateAccount = false
+                            createAccountPassword = ""
+                            confirmAccountPassword = ""
+                        }
+                    }
+                }) { Text("إنشاء الحساب", color = Violet) }
+            },
+            dismissButton = {
+                TextButton(onClick = { showCreateAccount = false }) { Text("إلغاء", color = Muted) }
+            },
+            containerColor = Panel,
+            titleContentColor = Color.White,
+            textContentColor = Muted
         )
     }
 }

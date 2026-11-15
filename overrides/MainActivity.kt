@@ -257,7 +257,8 @@ private fun MadiMusic(
     val context = LocalContext.current
     val prefs = remember(context) { context.getSharedPreferences("madi_music_preferences", Context.MODE_PRIVATE) }
     // Madi Music typography is fixed: users cannot switch the app font.
-    val appFont = FontFamily(Font(R.font.iphone), Font(R.font.ios_emoji))
+    val appFont = FontFamily(Font(R.font.iphone))
+    val emojiFont = FontFamily(Font(R.font.ios_emoji))
     var showIntro by remember { mutableStateOf(true) }
     var showLogin by remember { mutableStateOf(signedInName.isNullOrBlank()) }
     LaunchedEffect(Unit) {
@@ -370,12 +371,14 @@ private fun MadiMusic(
                         indexedTrackTitles,
                         selectedIndex, favorites,
                         { id -> if (favorites.contains(id)) favorites.remove(id) else favorites.add(id) }, ::play,
-                        onSearch = { page = 1 }
+                        onSearch = { page = 1 },
+                        onSeeAllAlbums = { page = 6 }
                     )
                     1 -> SearchPage(query, { query = it }, tracks, selectedIndex, favorites, { id -> if (favorites.contains(id)) favorites.remove(id) else favorites.add(id) }, ::play) 
                     2 -> TrackListPage("مكتبتي", "كل أغانيك في مكان واحد", tracks.indices.toList(), tracks, selectedIndex, favorites, { id -> if (favorites.contains(id)) favorites.remove(id) else favorites.add(id) }, ::play)
                     3 -> TrackListPage("الأغاني المفضلة", "الأغاني التي حفظتها بقلبك", tracks.indices.filter { favorites.contains(tracks[it].id) }, tracks, selectedIndex, favorites, { id -> if (favorites.contains(id)) favorites.remove(id) else favorites.add(id) }, ::play)
                     5 -> NowPlayingPage(current, playing, { page = 0 }, { if (playing) { player?.pause(); playing = false } else { if (player?.currentMediaItem == null) play(selectedIndex) else { player?.play(); playing = true } } }, ::play, selectedIndex, tracks.lastIndex, { showEqualizer = true })
+                    6 -> ArtistAlbumsPage(tracks, artistFilter, onBack = { page = 0 }, onSelectArtist = { artistFilter = it; page = 0 })
                     else -> SettingsPage(
                         signedInName, onGoogleLogin, onFacebookLogin, onSignOut,
                         onEmailLogin, onCreateAccount, onPasswordReset
@@ -447,54 +450,55 @@ private fun MadiMusic(
 private fun MadiIntroScreen() {
     Box(
         Modifier.fillMaxSize().background(
-            Brush.radialGradient(
-                colors = listOf(Color(0xFF382052), Color(0xFF120C1D), Color(0xFF050509)),
-                radius = 950f
+            Brush.verticalGradient(
+                listOf(Color(0xFF241238), Color(0xFF100B19), Color(0xFF050509))
             )
         ),
         contentAlignment = Alignment.Center
     ) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        Box(
+            Modifier.align(Alignment.TopEnd).offset(x = 72.dp, y = (-64).dp)
+                .size(230.dp).background(Color(0x223F1B60), RoundedCornerShape(120.dp))
+        )
+        Box(
+            Modifier.align(Alignment.BottomStart).offset(x = (-82).dp, y = 72.dp)
+                .size(250.dp).background(Color(0x182D1B45), RoundedCornerShape(130.dp))
+        )
+        Column(
+            Modifier.fillMaxWidth().padding(horizontal = 26.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
             Box(
-                Modifier.size(142.dp).background(
-                    Brush.linearGradient(listOf(Color(0xFFB33CFF), Color(0xFF4A1D70), Color(0xFF17101F))),
-                    RoundedCornerShape(38.dp)
-                ),
+                Modifier.size(154.dp)
+                    .background(
+                        Brush.linearGradient(listOf(Color(0xFFD58BFF), Color(0xFF8C35C9), Color(0xFF241334))),
+                        RoundedCornerShape(44.dp)
+                    )
+                    .border(1.dp, Color(0x88F0D7FF), RoundedCornerShape(44.dp)),
                 contentAlignment = Alignment.Center
             ) {
-                Text("M", color = Color.White, fontSize = 100.sp, fontWeight = FontWeight.Black)
-                Text("♛", Modifier.align(Alignment.TopCenter).offset(y = (-17).dp), color = Color(0xFFE7D9F5), fontSize = 35.sp)
+                Text("M", color = Color.White, fontSize = 104.sp, fontWeight = FontWeight.Black)
+                Text("♛", Modifier.align(Alignment.TopCenter).offset(y = (-19).dp), color = Color(0xFFFFE9B8), fontSize = 35.sp)
+                Text("♫", Modifier.align(Alignment.BottomEnd).offset(x = 9.dp, y = 9.dp), color = Color(0xFFFFE9B8), fontSize = 34.sp)
             }
-            Spacer(Modifier.height(28.dp))
-            Text(
-                "MADI MUSIC",
-                color = Color.White,
-                fontSize = 31.sp,
-                fontWeight = FontWeight.Black,
-                letterSpacing = 4.sp
+            Spacer(Modifier.height(34.dp))
+            Text("MADI MUSIC", color = Color.White, fontSize = 30.sp, fontWeight = FontWeight.Black, letterSpacing = 3.2.sp)
+            Spacer(Modifier.height(10.dp))
+            Text("موسيقاك… عالمك… على مزاجك", color = Color(0xFFE6D5F5), fontSize = 15.sp, fontWeight = FontWeight.Medium)
+            Spacer(Modifier.height(22.dp))
+            Box(
+                Modifier.width(92.dp).height(3.dp)
+                    .background(Brush.horizontalGradient(listOf(Color.Transparent, Violet, Color(0xFFFFD7A2), Color.Transparent)), RoundedCornerShape(3.dp))
             )
-            Spacer(Modifier.height(15.dp))
-            Box(Modifier.width(76.dp).height(2.dp).background(
-                Brush.horizontalGradient(listOf(Color.Transparent, Violet, Color.Transparent))
-            ))
-            Spacer(Modifier.height(18.dp))
-            Text(
-                "صُنع بكل شغف على يد شاب ليبي من ضواحي بنغازي",
-                color = Color(0xFFE1C9F7),
-                fontSize = 14.sp,
-                fontWeight = FontWeight.Medium
-            )
-            Spacer(Modifier.height(9.dp))
-            Text("M + K = 78 ❤️", color = Color(0xFFE7C5FF), fontSize = 13.sp, fontWeight = FontWeight.Bold)
-            Spacer(Modifier.height(7.dp))
-            Text("MADE IN LIBYA  •  🇱🇾", color = Muted, fontSize = 10.sp, letterSpacing = 2.sp)
+            Spacer(Modifier.height(20.dp))
+            Text("تجربة موسيقية راقية، أينما كنت", color = Color(0xFFBFB1CD), fontSize = 12.sp)
+            Spacer(Modifier.height(8.dp))
+            Text("MADE IN LIBYA  •  🇱🇾", color = Color(0xFF8E829C), fontSize = 10.sp, letterSpacing = 2.sp)
         }
         Text(
             "OFFLINE MUSIC EXPERIENCE",
-            Modifier.align(Alignment.BottomCenter).padding(bottom = 30.dp),
-            color = Color(0xFF80758E),
-            fontSize = 9.sp,
-            letterSpacing = 2.sp
+            Modifier.align(Alignment.BottomCenter).padding(bottom = 28.dp),
+            color = Color(0xFF766A83), fontSize = 9.sp, letterSpacing = 2.2.sp
         )
     }
 }
@@ -519,65 +523,61 @@ private fun MadiLoginScreen(
             contentScale = ContentScale.FillBounds
         )
 
-        BasicTextField(
-            value = email,
-            onValueChange = { email = it },
-            singleLine = true,
-            textStyle = LocalTextStyle.current.copy(
-                color = Color.White, fontSize = 15.sp, textAlign = TextAlign.Start
-            ),
-            cursorBrush = SolidColor(Violet),
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
-            modifier = Modifier
-                .offset(x = screenWidth * 0.22f, y = screenHeight * 0.493f)
-                .width(screenWidth * 0.38f)
-                .height(screenHeight * 0.052f)
-                .padding(horizontal = 5.dp, vertical = 9.dp)
-        )
-        BasicTextField(
-            value = password,
-            onValueChange = { password = it },
-            singleLine = true,
-            visualTransformation = PasswordVisualTransformation(),
-            textStyle = LocalTextStyle.current.copy(
-                color = Color.White, fontSize = 15.sp, textAlign = TextAlign.Start
-            ),
-            cursorBrush = SolidColor(Violet),
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
-            modifier = Modifier
-                .offset(x = screenWidth * 0.22f, y = screenHeight * 0.568f)
-                .width(screenWidth * 0.38f)
-                .height(screenHeight * 0.052f)
-                .padding(horizontal = 5.dp, vertical = 9.dp)
-        )
+        // Input layers share the same proportional canvas as the reference artwork.
+        Box(
+            Modifier.offset(x = screenWidth * 0.18f, y = screenHeight * 0.485f)
+                .width(screenWidth * 0.64f).height(screenHeight * 0.065f)
+                .padding(horizontal = 8.dp),
+            contentAlignment = Alignment.CenterStart
+        ) {
+            BasicTextField(
+                value = email,
+                onValueChange = { email = it },
+                singleLine = true,
+                textStyle = LocalTextStyle.current.copy(
+                    color = Color.White, fontSize = 14.sp, textAlign = TextAlign.Start
+                ),
+                cursorBrush = SolidColor(Violet),
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email, imeAction = ImeAction.Next),
+                modifier = Modifier.fillMaxWidth()
+            )
+        }
+        Box(
+            Modifier.offset(x = screenWidth * 0.18f, y = screenHeight * 0.558f)
+                .width(screenWidth * 0.64f).height(screenHeight * 0.065f)
+                .padding(horizontal = 8.dp),
+            contentAlignment = Alignment.CenterStart
+        ) {
+            BasicTextField(
+                value = password,
+                onValueChange = { password = it },
+                singleLine = true,
+                visualTransformation = PasswordVisualTransformation(),
+                textStyle = LocalTextStyle.current.copy(
+                    color = Color.White, fontSize = 14.sp, textAlign = TextAlign.Start
+                ),
+                cursorBrush = SolidColor(Violet),
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password, imeAction = ImeAction.Done),
+                modifier = Modifier.fillMaxWidth()
+            )
+        }
 
-        Box(
-            Modifier.offset(x = screenWidth * 0.07f, y = screenHeight * 0.633f)
-                .width(screenWidth * 0.86f).height(screenHeight * 0.068f)
-                .clickable { onEmailLogin(email, password) }
-        )
-        Box(
-            Modifier.offset(x = screenWidth * 0.075f, y = screenHeight * 0.749f)
-                .width(screenWidth * 0.41f).height(screenHeight * 0.066f)
-                .clickable(onClick = onGoogleLogin)
-        )
-        Box(
-            Modifier.offset(x = screenWidth * 0.52f, y = screenHeight * 0.749f)
-                .width(screenWidth * 0.41f).height(screenHeight * 0.066f)
-                .clickable(onClick = onFacebookLogin)
-        )
-        Box(
-            Modifier.offset(x = screenWidth * 0.17f, y = screenHeight * 0.862f)
-                .width(screenWidth * 0.66f).height(screenHeight * 0.045f)
-                .clickable { onPasswordReset(email) }
-        )
-        // The play control already drawn in the reference image doubles as guest entry,
-        // preserving offline access without adding an extra button to the design.
-        Box(
-            Modifier.offset(x = screenWidth * 0.405f, y = screenHeight * 0.905f)
-                .width(screenWidth * 0.19f).height(screenHeight * 0.085f)
-                .clickable(onClick = onGuest)
-        )
+        Box(Modifier.offset(x = screenWidth * 0.07f, y = screenHeight * 0.633f)
+            .width(screenWidth * 0.86f).height(screenHeight * 0.068f)
+            .clickable { onEmailLogin(email, password) })
+        Box(Modifier.offset(x = screenWidth * 0.075f, y = screenHeight * 0.749f)
+            .width(screenWidth * 0.41f).height(screenHeight * 0.066f)
+            .clickable(onClick = onGoogleLogin))
+        Box(Modifier.offset(x = screenWidth * 0.52f, y = screenHeight * 0.749f)
+            .width(screenWidth * 0.41f).height(screenHeight * 0.066f)
+            .clickable(onClick = onFacebookLogin))
+        Box(Modifier.offset(x = screenWidth * 0.17f, y = screenHeight * 0.862f)
+            .width(screenWidth * 0.66f).height(screenHeight * 0.045f)
+            .clickable { onPasswordReset(email) })
+        // The reference artwork's play control remains the guest/offline entry point.
+        Box(Modifier.offset(x = screenWidth * 0.405f, y = screenHeight * 0.905f)
+            .width(screenWidth * 0.19f).height(screenHeight * 0.085f)
+            .clickable(onClick = onGuest))
     }
 }
 
@@ -587,22 +587,66 @@ private data class ArtistAlbum(
     val songCount: Int
 )
 
+private fun artistAlbums(tracks: List<Track>): List<ArtistAlbum> = listOf(
+    ArtistAlbum("الشاب عقيل", "artist_cheb_akil", tracks.count { it.artist == "الشاب عقيل" }),
+    ArtistAlbum("الشاب مومو", "artist_cheb_momo", tracks.count { it.artist == "الشاب مومو" }),
+    ArtistAlbum("جندي الراب", "artist_aljundi", tracks.count { it.artist == "جندي الراب" }),
+    ArtistAlbum("رافع العكعوكي", "artist_rafea_alakoky", tracks.count { it.artist.contains("رافع") }),
+    ArtistAlbum("كولومبي", "artist_colomby", tracks.count { it.artist == "كولمبي" })
+)
+
+@Composable
+private fun ArtistAlbumsPage(
+    tracks: List<Track>,
+    selectedArtist: String,
+    onBack: () -> Unit,
+    onSelectArtist: (String) -> Unit
+) {
+    val albums = remember(tracks) { artistAlbums(tracks) }
+    LazyColumn(
+        Modifier.fillMaxSize().padding(horizontal = 18.dp),
+        verticalArrangement = Arrangement.spacedBy(14.dp),
+        contentPadding = PaddingValues(top = 8.dp, bottom = 24.dp)
+    ) {
+        item {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                IconButton(onClick = onBack) { Icon(Icons.Default.Home, "رجوع للرئيسية", tint = Color.White) }
+                Column(Modifier.weight(1f)) {
+                    Text("كل الألبومات", color = Color.White, fontSize = 23.sp, fontWeight = FontWeight.ExtraBold)
+                    Text("استكشف مكتبة الفنانين", color = Muted, fontSize = 12.sp)
+                }
+                Text("♫", color = Color(0xFFD8B4FF), fontSize = 26.sp)
+            }
+        }
+        items(albums.size, key = { index -> albums[index].artist }) { index ->
+            val album = albums[index]
+            Row(
+                Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp))
+                    .background(Panel).clickable { onSelectArtist(album.artist) }
+                    .padding(10.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(14.dp)
+            ) {
+                ArtistAlbumCard(album, selectedArtist == album.artist, { onSelectArtist(album.artist) })
+                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(7.dp)) {
+                    Text(album.artist, color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                    Text("${album.songCount} أغنية متاحة", color = Muted, fontSize = 12.sp)
+                    Text("استعراض أغاني الفنان", color = Color(0xFFD8B4FF), fontSize = 11.sp)
+                }
+            }
+        }
+    }
+}
+
 @Composable
 private fun HomePage(
     query: String, onQuery: (String) -> Unit, artistFilter: String, onArtist: (String) -> Unit,
     indexedTitles: List<Pair<Int, String>>,
-    selected: Int, favorites: List<String>, onFavorite: (String) -> Unit, onPlay: (Int) -> Unit, onSearch: () -> Unit
+    selected: Int, favorites: List<String>, onFavorite: (String) -> Unit, onPlay: (Int) -> Unit,
+    onSearch: () -> Unit, onSeeAllAlbums: () -> Unit
 ) {
     val tracks = MusicCatalog.tracks
-    val albums = remember(tracks) {
-        listOf(
-            ArtistAlbum("الشاب عقيل", "artist_cheb_akil", tracks.count { it.artist == "الشاب عقيل" }),
-            ArtistAlbum("الشاب مومو", "artist_cheb_momo", tracks.count { it.artist == "الشاب مومو" }),
-            ArtistAlbum("جندي الراب", "artist_aljundi", tracks.count { it.artist == "جندي الراب" }),
-            ArtistAlbum("رافع العكعوكي", "artist_rafea_alakoky", tracks.count { it.artist.contains("رافع") }),
-            ArtistAlbum("كولومبي", "artist_colomby", tracks.count { it.artist == "كولمبي" })
-        )
-    }
+    val albums = remember(tracks) { artistAlbums(tracks) }
     val filtered = remember(indexedTitles, artistFilter, query, tracks) {
         indexedTitles.filter { pair ->
             val track = tracks[pair.first]
@@ -652,9 +696,11 @@ private fun HomePage(
                 }
                 Spacer(Modifier.height(8.dp))
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text("🎵 ألبومات الفنانين", color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.ExtraBold)
+                    Text("🎵", color = Color.White, fontSize = 18.sp, fontFamily = emojiFont)
+                    Spacer(Modifier.width(6.dp))
+                    Text("ألبومات الفنانين", color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.ExtraBold)
                     Spacer(Modifier.weight(1f))
-                    TextButton(onClick = { onArtist("الكل") }, contentPadding = PaddingValues(0.dp)) {
+                    TextButton(onClick = onSeeAllAlbums, contentPadding = PaddingValues(0.dp)) {
                         Text("عرض الكل", color = Color(0xFFD9B6FF), fontSize = 11.sp)
                     }
                 }

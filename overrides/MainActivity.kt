@@ -49,6 +49,8 @@ import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.SkipNext
 import androidx.compose.material.icons.filled.SkipPrevious
+import androidx.compose.material.icons.filled.Visibility
+import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -604,9 +606,15 @@ private fun MadiLoginScreen(
 ) {
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
+    var passwordVisible by remember { mutableStateOf(false) }
+
     BoxWithConstraints(Modifier.fillMaxSize().background(Night)) {
         val screenWidth = maxWidth
         val screenHeight = maxHeight
+
+        // Keep the original login artwork as the fixed visual layer; all controls
+        // use the same proportional coordinates so they remain aligned on phones
+        // with different dimensions.
         Image(
             painter = painterResource(R.drawable.login_screen_reference),
             contentDescription = "شاشة تسجيل الدخول الأصلية لتطبيق Madi Music",
@@ -614,10 +622,10 @@ private fun MadiLoginScreen(
             contentScale = ContentScale.FillBounds
         )
 
-        // Input layers share the same proportional canvas as the reference artwork.
         Box(
             Modifier.offset(x = screenWidth * 0.18f, y = screenHeight * 0.485f)
-                .width(screenWidth * 0.64f).height(screenHeight * 0.065f)
+                .width(screenWidth * 0.64f)
+                .height(screenHeight * 0.065f)
                 .padding(horizontal = 8.dp),
             contentAlignment = Alignment.CenterStart
         ) {
@@ -633,42 +641,73 @@ private fun MadiLoginScreen(
                 modifier = Modifier.fillMaxWidth()
             )
         }
+
         Box(
             Modifier.offset(x = screenWidth * 0.18f, y = screenHeight * 0.558f)
-                .width(screenWidth * 0.64f).height(screenHeight * 0.065f)
-                .padding(horizontal = 8.dp),
-            contentAlignment = Alignment.CenterStart
+                .width(screenWidth * 0.64f)
+                .height(screenHeight * 0.065f)
+                .padding(start = 8.dp, end = 3.dp),
+            contentAlignment = Alignment.Center
         ) {
-            BasicTextField(
-                value = password,
-                onValueChange = { password = it },
-                singleLine = true,
-                visualTransformation = PasswordVisualTransformation(),
-                textStyle = LocalTextStyle.current.copy(
-                    color = Color.White, fontSize = 14.sp, textAlign = TextAlign.Start
-                ),
-                cursorBrush = SolidColor(Violet),
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password, imeAction = ImeAction.Done),
-                modifier = Modifier.fillMaxWidth()
-            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                BasicTextField(
+                    value = password,
+                    onValueChange = { password = it },
+                    singleLine = true,
+                    visualTransformation = if (passwordVisible) {
+                        androidx.compose.ui.text.input.VisualTransformation.None
+                    } else {
+                        PasswordVisualTransformation()
+                    },
+                    textStyle = LocalTextStyle.current.copy(
+                        color = Color.White, fontSize = 14.sp, textAlign = TextAlign.Start
+                    ),
+                    cursorBrush = SolidColor(Violet),
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password, imeAction = ImeAction.Done),
+                    modifier = Modifier.weight(1f)
+                )
+                IconButton(
+                    onClick = { passwordVisible = !passwordVisible },
+                    modifier = Modifier.size(34.dp)
+                ) {
+                    Icon(
+                        imageVector = if (passwordVisible) Icons.Default.VisibilityOff else Icons.Default.Visibility,
+                        contentDescription = if (passwordVisible) "إخفاء كلمة المرور" else "إظهار كلمة المرور",
+                        tint = Color(0xFFD9B5FF)
+                    )
+                }
+            }
         }
 
-        Box(Modifier.offset(x = screenWidth * 0.07f, y = screenHeight * 0.633f)
-            .width(screenWidth * 0.86f).height(screenHeight * 0.068f)
-            .clickable { onEmailLogin(email, password) })
-        Box(Modifier.offset(x = screenWidth * 0.075f, y = screenHeight * 0.749f)
-            .width(screenWidth * 0.41f).height(screenHeight * 0.066f)
-            .clickable(onClick = onGoogleLogin))
-        Box(Modifier.offset(x = screenWidth * 0.52f, y = screenHeight * 0.749f)
-            .width(screenWidth * 0.41f).height(screenHeight * 0.066f)
-            .clickable(onClick = onFacebookLogin))
-        Box(Modifier.offset(x = screenWidth * 0.17f, y = screenHeight * 0.862f)
-            .width(screenWidth * 0.66f).height(screenHeight * 0.045f)
-            .clickable { onPasswordReset(email) })
+        Box(
+            Modifier.offset(x = screenWidth * 0.07f, y = screenHeight * 0.633f)
+                .width(screenWidth * 0.86f).height(screenHeight * 0.068f)
+                .clickable { onEmailLogin(email, password) }
+        )
+        Box(
+            Modifier.offset(x = screenWidth * 0.075f, y = screenHeight * 0.749f)
+                .width(screenWidth * 0.41f).height(screenHeight * 0.066f)
+                .clickable(onClick = onGoogleLogin)
+        )
+        Box(
+            Modifier.offset(x = screenWidth * 0.52f, y = screenHeight * 0.749f)
+                .width(screenWidth * 0.41f).height(screenHeight * 0.066f)
+                .clickable(onClick = onFacebookLogin)
+        )
+        Box(
+            Modifier.offset(x = screenWidth * 0.17f, y = screenHeight * 0.862f)
+                .width(screenWidth * 0.66f).height(screenHeight * 0.045f)
+                .clickable { onPasswordReset(email) }
+        )
         // The reference artwork's play control remains the guest/offline entry point.
-        Box(Modifier.offset(x = screenWidth * 0.405f, y = screenHeight * 0.905f)
-            .width(screenWidth * 0.19f).height(screenHeight * 0.085f)
-            .clickable(onClick = onGuest))
+        Box(
+            Modifier.offset(x = screenWidth * 0.405f, y = screenHeight * 0.905f)
+                .width(screenWidth * 0.19f).height(screenHeight * 0.085f)
+                .clickable(onClick = onGuest)
+        )
     }
 }
 

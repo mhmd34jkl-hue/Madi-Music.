@@ -59,6 +59,8 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.Font
@@ -269,8 +271,9 @@ private fun MadiMusic(
     val appFont = FontFamily(Font(R.font.iphone))
     var showIntro by remember { mutableStateOf(true) }
     var showLogin by remember { mutableStateOf(signedInName.isNullOrBlank()) }
+    // Keep the branded intro brief; never hold the user for several seconds.
     LaunchedEffect(Unit) {
-        delay(2800)
+        delay(850)
         showIntro = false
     }
     LaunchedEffect(signedInName) {
@@ -386,7 +389,7 @@ private fun MadiMusic(
             }
 
             Box(Modifier.weight(1f).fillMaxWidth()) {
-                Crossfade(targetState = page, animationSpec = tween(durationMillis = 240, easing = FastOutSlowInEasing), label = "madi-page-transition") { targetPage ->
+                Crossfade(targetState = page, animationSpec = tween(durationMillis = 120, easing = FastOutSlowInEasing), label = "madi-page-transition") { targetPage ->
                 when (targetPage) {
                     0 -> HomePage(
                         query, { query = it }, artistFilter, { artistFilter = it },
@@ -607,6 +610,7 @@ private fun MadiLoginScreen(
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var passwordVisible by remember { mutableStateOf(false) }
+    val focusManager = LocalFocusManager.current
 
     BoxWithConstraints(Modifier.fillMaxSize().background(Night)) {
         val screenWidth = maxWidth
@@ -638,6 +642,7 @@ private fun MadiLoginScreen(
                 ),
                 cursorBrush = SolidColor(Violet),
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email, imeAction = ImeAction.Next),
+                keyboardActions = KeyboardActions(onNext = { focusManager.moveFocus(FocusDirection.Down) }),
                 modifier = Modifier.fillMaxWidth()
             )
         }
@@ -667,6 +672,10 @@ private fun MadiLoginScreen(
                     ),
                     cursorBrush = SolidColor(Violet),
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password, imeAction = ImeAction.Done),
+                    keyboardActions = KeyboardActions(onDone = {
+                        focusManager.clearFocus()
+                        onEmailLogin(email, password)
+                    }),
                     modifier = Modifier.weight(1f)
                 )
                 IconButton(

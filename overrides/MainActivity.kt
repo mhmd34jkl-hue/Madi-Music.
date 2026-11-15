@@ -291,6 +291,7 @@ private fun MadiMusic(
     var showEqualizer by remember { mutableStateOf(false) }
     val favorites = remember { mutableStateListOf<String>() }
     val tracks = MusicCatalog.tracks
+    val indexedTrackTitles = remember(tracks) { tracks.mapIndexed { index, track -> index to track.title } }
     val current = tracks[selectedIndex]
 
     DisposableEffect(player) {
@@ -360,7 +361,7 @@ private fun MadiMusic(
                 when (targetPage) {
                     0 -> HomePage(
                         query, { query = it }, artistFilter, { artistFilter = it },
-                        tracks.mapIndexed { index, track -> index to track.title },
+                        indexedTrackTitles,
                         selectedIndex, favorites,
                         { id -> if (favorites.contains(id)) favorites.remove(id) else favorites.add(id) }, ::play,
                         onSearch = { page = 1 }
@@ -587,18 +588,22 @@ private fun HomePage(
     selected: Int, favorites: List<String>, onFavorite: (String) -> Unit, onPlay: (Int) -> Unit, onSearch: () -> Unit
 ) {
     val tracks = MusicCatalog.tracks
-    val albums = listOf(
-        ArtistAlbum("الشاب عقيل", "artist_cheb_akil", tracks.count { it.artist == "الشاب عقيل" }),
-        ArtistAlbum("الشاب مومو", "artist_cheb_momo", tracks.count { it.artist == "الشاب مومو" }),
-        ArtistAlbum("جندي الراب", "artist_aljundi", tracks.count { it.artist == "جندي الراب" }),
-        ArtistAlbum("رافع العكعوكي", "artist_rafea_alakoky", tracks.count { it.artist.contains("رافع") }),
-        ArtistAlbum("كولومبي", "artist_colomby", tracks.count { it.artist == "كولمبي" })
-    )
-    val filtered = indexedTitles.filter { pair ->
-        val track = tracks[pair.first]
-        (artistFilter == "الكل" || track.artist == artistFilter ||
-            (artistFilter == "رافع العكعوكي" && track.artist.contains("رافع"))) &&
-            (query.isBlank() || track.title.contains(query, true) || track.artist.contains(query, true))
+    val albums = remember(tracks) {
+        listOf(
+            ArtistAlbum("الشاب عقيل", "artist_cheb_akil", tracks.count { it.artist == "الشاب عقيل" }),
+            ArtistAlbum("الشاب مومو", "artist_cheb_momo", tracks.count { it.artist == "الشاب مومو" }),
+            ArtistAlbum("جندي الراب", "artist_aljundi", tracks.count { it.artist == "جندي الراب" }),
+            ArtistAlbum("رافع العكعوكي", "artist_rafea_alakoky", tracks.count { it.artist.contains("رافع") }),
+            ArtistAlbum("كولومبي", "artist_colomby", tracks.count { it.artist == "كولمبي" })
+        )
+    }
+    val filtered = remember(indexedTitles, artistFilter, query, tracks) {
+        indexedTitles.filter { pair ->
+            val track = tracks[pair.first]
+            (artistFilter == "الكل" || track.artist == artistFilter ||
+                (artistFilter == "رافع العكعوكي" && track.artist.contains("رافع"))) &&
+                (query.isBlank() || track.title.contains(query, true) || track.artist.contains(query, true))
+        }
     }
     LazyColumn(
         Modifier.fillMaxSize().padding(horizontal = 18.dp),
@@ -771,8 +776,10 @@ private fun SearchPage(
     onFavorite: (String) -> Unit,
     onPlay: (Int) -> Unit
 ) {
-    val results = tracks.indices.filter { i ->
-        query.isNotBlank() && (tracks[i].title.contains(query, true) || tracks[i].artist.contains(query, true))
+    val results = remember(query, tracks) {
+        tracks.indices.filter { i ->
+            query.isNotBlank() && (tracks[i].title.contains(query, true) || tracks[i].artist.contains(query, true))
+        }
     }
     Column(Modifier.fillMaxSize().padding(horizontal = 18.dp)) {
         Text("البحث", color = Color.White, fontSize = 27.sp, fontWeight = FontWeight.ExtraBold)

@@ -1,0 +1,5 @@
+Original bytes: 47175752
+Subset bytes: 1068556
+Unicode codepoints retained: 86
+Original tables: ['CBDT', 'CBLC', 'GSUB', 'GlyphOrder', 'OS/2', 'cmap', 'head', 'hhea', 'hmtx', 'maxp', 'name', 'post', 'vhea', 'vmtx']
+Subset tables: ['CBDT', 'CBLC', 'GSUB', 'GlyphOrder', 'OS/2', 'cmap', 'head', 'hhea', 'hmtx', 'maxp', 'name', 'post', 'vhea', 'vmtx']

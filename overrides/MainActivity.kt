@@ -512,8 +512,8 @@ private fun MadiLoginScreen(
             cursorBrush = SolidColor(Violet),
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
             modifier = Modifier
-                .offset(x = screenWidth * 0.20f, y = screenHeight * 0.493f)
-                .width(screenWidth * 0.60f)
+                .offset(x = screenWidth * 0.22f, y = screenHeight * 0.493f)
+                .width(screenWidth * 0.38f)
                 .height(screenHeight * 0.052f)
                 .padding(horizontal = 5.dp, vertical = 9.dp)
         )
@@ -528,8 +528,8 @@ private fun MadiLoginScreen(
             cursorBrush = SolidColor(Violet),
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
             modifier = Modifier
-                .offset(x = screenWidth * 0.20f, y = screenHeight * 0.568f)
-                .width(screenWidth * 0.60f)
+                .offset(x = screenWidth * 0.22f, y = screenHeight * 0.568f)
+                .width(screenWidth * 0.38f)
                 .height(screenHeight * 0.052f)
                 .padding(horizontal = 5.dp, vertical = 9.dp)
         )
@@ -631,7 +631,7 @@ private fun HomePage(
                 }
                 Spacer(Modifier.height(8.dp))
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text("ألبومات الفنانين", color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.ExtraBold)
+                    Text("🎵 ألبومات الفنانين", color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.ExtraBold)
                     Spacer(Modifier.weight(1f))
                     TextButton(onClick = { onArtist("الكل") }, contentPadding = PaddingValues(0.dp)) {
                         Text("عرض الكل", color = Color(0xFFD9B6FF), fontSize = 11.sp)

@@ -81,6 +81,7 @@ private val PanelLight = Color(0xFF1B1727)
 private val Violet = Color(0xFFB33CFF)
 private val Muted = Color(0xFFA9A4B8)
 private val SupportNumber = "218947088407"
+private val iPhoneEmojiFont = FontFamily(Font(R.font.ios_emoji))
 
 class MainActivity : ComponentActivity() {
     private var controller by mutableStateOf<MediaController?>(null)
@@ -258,7 +259,6 @@ private fun MadiMusic(
     val prefs = remember(context) { context.getSharedPreferences("madi_music_preferences", Context.MODE_PRIVATE) }
     // Madi Music typography is fixed: users cannot switch the app font.
     val appFont = FontFamily(Font(R.font.iphone))
-    val emojiFont = FontFamily(Font(R.font.ios_emoji))
     var showIntro by remember { mutableStateOf(true) }
     var showLogin by remember { mutableStateOf(signedInName.isNullOrBlank()) }
     LaunchedEffect(Unit) {
@@ -696,7 +696,7 @@ private fun HomePage(
                 }
                 Spacer(Modifier.height(8.dp))
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text("🎵", color = Color.White, fontSize = 18.sp, fontFamily = emojiFont)
+                    Text("🎵", color = Color.White, fontSize = 18.sp, fontFamily = iPhoneEmojiFont)
                     Spacer(Modifier.width(6.dp))
                     Text("ألبومات الفنانين", color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.ExtraBold)
                     Spacer(Modifier.weight(1f))

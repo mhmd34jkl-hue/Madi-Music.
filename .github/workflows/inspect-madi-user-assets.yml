@@ -93,7 +93,7 @@ jobs:
           selected.update(cp for cp in (0x200D,0xFE0E,0xFE0F,0x20E3) if cp in cmap)
           if not selected: raise SystemExit("Emoji font had no expected emoji Unicode coverage")
           unicode_arg=",".join(f"U+{cp:04X}" for cp in sorted(selected))
-          subprocess.run(["/home/runner/.local/bin/pyftsubset",str(font_path),"--output-file",str(out/"ios_emoji_subset.ttf"),"--unicodes="+unicode_arg,"--layout-features=*","--glyph-names","--symbol-cmap","--legacy-cmap","--notdef-glyph","--notdef-outline","--recommended-glyphs","--name-IDs=*","--name-languages=*"],check=True)
+          subprocess.run(["/home/runner/.local/bin/pyftsubset",str(font_path),"--output-file="+str(out/"ios_emoji_subset.ttf"),"--unicodes="+unicode_arg,"--layout-features=*","--glyph-names","--symbol-cmap","--legacy-cmap","--notdef-glyph","--notdef-outline","--recommended-glyphs","--name-IDs=*","--name-languages=*"],check=True)
           subset=out/"ios_emoji_subset.ttf"
           subfont=TTFont(str(subset))
           with open(out/"emoji-font-report.txt","w") as f:

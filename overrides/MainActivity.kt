@@ -18,6 +18,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.ui.draw.clip
+import androidx.compose.animation.Crossfade
 import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -56,6 +57,8 @@ import androidx.compose.material3.LocalTextStyle
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -298,6 +301,10 @@ private fun MadiMusic(
             }
             override fun onIsPlayingChanged(isPlaying: Boolean) { playing = isPlaying }
         }
+        if (player != null && player.mediaItemCount == 0) {
+            player.setMediaItems(MusicCatalog.mediaItems(), 0, 0L)
+            player.prepare()
+        }
         player?.addListener(listener)
         onDispose { player?.removeListener(listener) }
     }
@@ -305,9 +312,10 @@ private fun MadiMusic(
     fun play(index: Int) {
         val safeIndex = index.coerceIn(0, tracks.lastIndex)
         selectedIndex = safeIndex
-        player?.setMediaItems(MusicCatalog.mediaItems(), safeIndex, 0L)
-        player?.prepare()
-        player?.play()
+        if (player != null) {
+            player.seekToDefaultPosition(safeIndex)
+            player.play()
+        }
         playing = player != null
     }
 
@@ -348,7 +356,8 @@ private fun MadiMusic(
             }
 
             Box(Modifier.weight(1f).fillMaxWidth()) {
-                when (page) {
+                Crossfade(targetState = page, label = "madi-page-transition") { targetPage ->
+                when (targetPage) {
                     0 -> HomePage(
                         query, { query = it }, artistFilter, { artistFilter = it },
                         tracks.mapIndexed { index, track -> index to track.title },
@@ -364,6 +373,7 @@ private fun MadiMusic(
                         signedInName, onGoogleLogin, onFacebookLogin, onSignOut,
                         onEmailLogin, onCreateAccount, onPasswordReset
                     )
+                }
                 }
             }
 
@@ -661,7 +671,7 @@ private fun HomePage(
         if (filtered.isEmpty()) {
             item { Text("لا توجد نتائج مطابقة. جرّب اسماً آخر.", color = Muted, modifier = Modifier.padding(vertical = 22.dp)) }
         } else {
-            itemsIndexed(filtered) { _, pair ->
+            itemsIndexed(filtered, key = { _, pair -> tracks[pair.first].id }) { _, pair ->
                 val index = pair.first
                 TrackRow(
                     index, tracks[index], selected,
@@ -777,7 +787,7 @@ private fun SearchPage(
         } else {
             Text("${results.size} نتيجة", color = Muted, fontSize = 12.sp)
             LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                itemsIndexed(results) { _, index ->
+                itemsIndexed(results, key = { _, trackIndex -> tracks[trackIndex].id }) { _, index ->
                     TrackRow(index, tracks[index], selected, favorites.contains(tracks[index].id), { onPlay(index) }, { onFavorite(tracks[index].id) })
                 }
             }
@@ -804,7 +814,7 @@ private fun TrackListPage(
             Text("لا توجد أغاني هنا بعد. أضف الأغاني إلى المفضلة من المكتبة.", color = Muted, modifier = Modifier.padding(top = 20.dp))
         } else {
             LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                itemsIndexed(indices) { _, index ->
+                itemsIndexed(indices, key = { _, trackIndex -> tracks[trackIndex].id }) { _, index ->
                     TrackRow(index, tracks[index], selected, favorites.contains(tracks[index].id), { onPlay(index) }, { onFavorite(tracks[index].id) })
                 }
             }
@@ -883,6 +893,8 @@ private fun SearchField(value: String, onValue: (String) -> Unit, onSearch: () -
         placeholder = { Text("ابحث عن أغنية أو فنان…", color = Muted) },
         leadingIcon = { Text("🔍", color = Color(0xFFDCC2F4), fontSize = 22.sp) },
         singleLine = true,
+        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+        keyboardActions = KeyboardActions(onSearch = { onSearch() }),
         shape = RoundedCornerShape(16.dp),
         colors = OutlinedTextFieldDefaults.colors(
             focusedTextColor = Color.White,

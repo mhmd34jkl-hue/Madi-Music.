@@ -19,6 +19,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.ui.draw.clip
 import androidx.compose.animation.Crossfade
+import androidx.compose.animation.core.tween
 import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -362,7 +363,7 @@ private fun MadiMusic(
             }
 
             Box(Modifier.weight(1f).fillMaxWidth()) {
-                Crossfade(targetState = page, label = "madi-page-transition") { targetPage ->
+                Crossfade(targetState = page, animationSpec = tween(durationMillis = 180), label = "madi-page-transition") { targetPage ->
                 when (targetPage) {
                     0 -> HomePage(
                         query, { query = it }, artistFilter, { artistFilter = it },
@@ -834,20 +835,21 @@ private fun TrackListPage(
     }
 }
 
+private val ArtworkPalettes = listOf(
+    listOf(Color(0xFF7B35B7), Color(0xFF21102F)), listOf(Color(0xFF17627A), Color(0xFF101B30)),
+    listOf(Color(0xFFB35B35), Color(0xFF351725)), listOf(Color(0xFF8B3C76), Color(0xFF24152F)),
+    listOf(Color(0xFF395DAD), Color(0xFF121B36)), listOf(Color(0xFF9B762D), Color(0xFF302018)),
+    listOf(Color(0xFF347B62), Color(0xFF102B29)), listOf(Color(0xFF9C3D4E), Color(0xFF321522)),
+    listOf(Color(0xFF6B55B6), Color(0xFF1B1638)), listOf(Color(0xFFB16C37), Color(0xFF301D20)),
+    listOf(Color(0xFF286B8D), Color(0xFF101E32)), listOf(Color(0xFF8A4A9D), Color(0xFF25152E)),
+    listOf(Color(0xFF4F7B9A), Color(0xFF162235)), listOf(Color(0xFFAD476F), Color(0xFF31162A)),
+    listOf(Color(0xFF5A8A50), Color(0xFF182B20)), listOf(Color(0xFFAA7A35), Color(0xFF332018))
+)
+private val ArtworkSymbols = listOf("✦", "◉", "☾", "♬", "✧", "◆", "❖", "♫", "⬡", "✺", "◈", "✷", "◎", "✹", "△", "✵")
+
 @Composable
 private fun TrackArtwork(index: Int, modifier: Modifier = Modifier) {
-    val palettes = listOf(
-        listOf(Color(0xFF7B35B7), Color(0xFF21102F)), listOf(Color(0xFF17627A), Color(0xFF101B30)),
-        listOf(Color(0xFFB35B35), Color(0xFF351725)), listOf(Color(0xFF8B3C76), Color(0xFF24152F)),
-        listOf(Color(0xFF395DAD), Color(0xFF121B36)), listOf(Color(0xFF9B762D), Color(0xFF302018)),
-        listOf(Color(0xFF347B62), Color(0xFF102B29)), listOf(Color(0xFF9C3D4E), Color(0xFF321522)),
-        listOf(Color(0xFF6B55B6), Color(0xFF1B1638)), listOf(Color(0xFFB16C37), Color(0xFF301D20)),
-        listOf(Color(0xFF286B8D), Color(0xFF101E32)), listOf(Color(0xFF8A4A9D), Color(0xFF25152E)),
-        listOf(Color(0xFF4F7B9A), Color(0xFF162235)), listOf(Color(0xFFAD476F), Color(0xFF31162A)),
-        listOf(Color(0xFF5A8A50), Color(0xFF182B20)), listOf(Color(0xFFAA7A35), Color(0xFF332018))
-    )
-    val symbols = listOf("✦", "◉", "☾", "♬", "✧", "◆", "❖", "♫", "⬡", "✺", "◈", "✷", "◎", "✹", "△", "✵")
-    val safeIndex = index.coerceIn(0, 15)
+    val safeIndex = index.coerceIn(0, MusicCatalog.tracks.lastIndex)
     val context = LocalContext.current
     val coverName = MusicCatalog.tracks.getOrNull(safeIndex)?.coverResourceName.orEmpty()
     val coverId = remember(coverName) {
@@ -861,9 +863,9 @@ private fun TrackArtwork(index: Int, modifier: Modifier = Modifier) {
             contentScale = ContentScale.Crop
         )
     } else {
-        Box(modifier.background(Brush.linearGradient(palettes[safeIndex]), RoundedCornerShape(16.dp)), contentAlignment = Alignment.Center) {
+        Box(modifier.background(Brush.linearGradient(ArtworkPalettes[safeIndex]), RoundedCornerShape(16.dp)), contentAlignment = Alignment.Center) {
             Box(Modifier.fillMaxSize().padding(5.dp).background(Color(0x1FFFFFFF), RoundedCornerShape(13.dp)))
-            Text(symbols[safeIndex], color = Color(0xFFEEDBFF), fontSize = 31.sp, fontWeight = FontWeight.Light)
+            Text(ArtworkSymbols[safeIndex], color = Color(0xFFEEDBFF), fontSize = 31.sp, fontWeight = FontWeight.Light)
             Text("%02d".format(safeIndex + 1), Modifier.align(Alignment.BottomEnd).padding(7.dp), color = Color(0xBFFFFFFF), fontSize = 9.sp, fontWeight = FontWeight.Bold)
         }
     }

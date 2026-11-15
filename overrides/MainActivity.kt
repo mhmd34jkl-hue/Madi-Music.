@@ -448,65 +448,132 @@ private fun MadiMusic(
 
 @Composable
 private fun MadiIntroScreen() {
+    val transition = rememberInfiniteTransition(label = "madi-intro-loader")
+    val sweep by transition.animateFloat(
+        initialValue = 0f,
+        targetValue = 360f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 1050, easing = LinearEasing),
+            repeatMode = RepeatMode.Restart
+        ),
+        label = "madi-intro-loader-rotation"
+    )
+    val glow by transition.animateFloat(
+        initialValue = 0.72f,
+        targetValue = 1f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 1400, easing = FastOutSlowInEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "madi-intro-glow"
+    )
     Box(
         Modifier.fillMaxSize().background(
             Brush.verticalGradient(
-                listOf(Color(0xFF241238), Color(0xFF100B19), Color(0xFF050509))
+                listOf(Color(0xFF160D22), Color(0xFF09070F), Color(0xFF030306))
             )
         ),
         contentAlignment = Alignment.Center
     ) {
         Box(
-            Modifier.align(Alignment.TopEnd).offset(x = 72.dp, y = (-64).dp)
-                .size(230.dp).background(Color(0x223F1B60), RoundedCornerShape(120.dp))
+            Modifier.align(Alignment.TopEnd).offset(x = 86.dp, y = (-76).dp)
+                .size(270.dp)
+                .background(Color(0x223F1B60).copy(alpha = glow * 0.72f), RoundedCornerShape(140.dp))
         )
         Box(
-            Modifier.align(Alignment.BottomStart).offset(x = (-82).dp, y = 72.dp)
-                .size(250.dp).background(Color(0x182D1B45), RoundedCornerShape(130.dp))
+            Modifier.align(Alignment.BottomStart).offset(x = (-90).dp, y = 80.dp)
+                .size(280.dp).background(Color(0x1E6D2C9C), RoundedCornerShape(150.dp))
         )
         Column(
-            Modifier.fillMaxWidth().padding(horizontal = 26.dp),
+            Modifier.fillMaxWidth().padding(horizontal = 25.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Box(
-                Modifier.size(154.dp)
+                Modifier.size(178.dp)
                     .background(
-                        Brush.linearGradient(listOf(Color(0xFFD58BFF), Color(0xFF8C35C9), Color(0xFF241334))),
-                        RoundedCornerShape(44.dp)
+                        Brush.linearGradient(listOf(Color(0xFFE7D9F2), Color(0xFF9A58C5), Color(0xFF21132F))),
+                        RoundedCornerShape(48.dp)
                     )
-                    .border(1.dp, Color(0x88F0D7FF), RoundedCornerShape(44.dp)),
+                    .border(1.dp, Color(0x99F1DFFF), RoundedCornerShape(48.dp)),
                 contentAlignment = Alignment.Center
             ) {
-                Text("M", color = Color.White, fontSize = 104.sp, fontWeight = FontWeight.Black)
-                Text("♛", Modifier.align(Alignment.TopCenter).offset(y = (-19).dp), color = Color(0xFFFFE9B8), fontSize = 35.sp)
-                Text("♫", Modifier.align(Alignment.BottomEnd).offset(x = 9.dp, y = 9.dp), color = Color(0xFFFFE9B8), fontSize = 34.sp)
+                Box(
+                    Modifier.fillMaxSize().padding(8.dp)
+                        .border(1.dp, Color(0x55FFFFFF), RoundedCornerShape(41.dp))
+                )
+                Text("M", color = Color(0xFFFAF5FF), fontSize = 118.sp, fontWeight = FontWeight.Black)
+                Text("♛", Modifier.align(Alignment.TopCenter).offset(y = (-21).dp), color = Color(0xFFFFE6B0), fontSize = 39.sp)
+                Text("♫", Modifier.align(Alignment.BottomEnd).offset(x = 10.dp, y = 8.dp), color = Color(0xFFFFE6B0), fontSize = 36.sp)
             }
             Spacer(Modifier.height(34.dp))
-            Text("MADI MUSIC", color = Color.White, fontSize = 30.sp, fontWeight = FontWeight.Black, letterSpacing = 3.2.sp)
-            Spacer(Modifier.height(10.dp))
-            Text("موسيقاك… عالمك… على مزاجك", color = Color(0xFFE6D5F5), fontSize = 15.sp, fontWeight = FontWeight.Medium)
-            Spacer(Modifier.height(22.dp))
-            Box(
-                Modifier.width(92.dp).height(3.dp)
-                    .background(Brush.horizontalGradient(listOf(Color.Transparent, Violet, Color(0xFFFFD7A2), Color.Transparent)), RoundedCornerShape(3.dp))
+            Text(
+                "MADI MUSIC",
+                color = Color.White,
+                fontSize = 31.sp,
+                fontWeight = FontWeight.Black,
+                letterSpacing = 3.1.sp
             )
-            Spacer(Modifier.height(20.dp))
-            Text("تجربة موسيقية راقية، أينما كنت", color = Color(0xFFBFB1CD), fontSize = 12.sp)
-            Spacer(Modifier.height(8.dp))
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text("MADE IN LIBYA  •", color = Color(0xFF8E829C), fontSize = 10.sp, letterSpacing = 2.sp)
-                Spacer(Modifier.width(4.dp))
-                Text("🇱🇾", color = Color(0xFF8E829C), fontSize = 12.sp, fontFamily = iPhoneEmojiFont)
+            Spacer(Modifier.height(11.dp))
+            Text(
+                "موسيقاك… عالمك… على مزاجك",
+                color = Color(0xFFF0E3FA),
+                fontSize = 16.sp,
+                fontWeight = FontWeight.SemiBold,
+                textAlign = TextAlign.Center
+            )
+            Spacer(Modifier.height(17.dp))
+            Box(
+                Modifier.width(104.dp).height(3.dp)
+                    .background(
+                        Brush.horizontalGradient(listOf(Color.Transparent, Violet, Color(0xFFFFD7A2), Color.Transparent)),
+                        RoundedCornerShape(3.dp)
+                    )
+            )
+            Spacer(Modifier.height(18.dp))
+            Text(
+                "استمتع بأفضل تجربة موسيقية بجودة عالية وبدون إنترنت",
+                color = Color(0xFFC8BBD4),
+                fontSize = 12.sp,
+                textAlign = TextAlign.Center,
+                lineHeight = 20.sp
+            )
+            Spacer(Modifier.height(34.dp))
+            // Animated circular loading indicator shown while the intro transitions to login.
+            Box(Modifier.size(48.dp), contentAlignment = Alignment.Center) {
+                androidx.compose.foundation.Canvas(Modifier.fillMaxSize()) {
+                    drawArc(
+                        color = Color(0xFF4A365A),
+                        startAngle = 0f,
+                        sweepAngle = 360f,
+                        useCenter = false,
+                        style = androidx.compose.ui.graphics.drawscope.Stroke(width = 3.dp.toPx())
+                    )
+                    drawArc(
+                        brush = Brush.sweepGradient(listOf(Color(0x00C77BFF), Color(0xFFE4B8FF), Violet, Color(0x00C77BFF))),
+                        startAngle = sweep,
+                        sweepAngle = 278f,
+                        useCenter = false,
+                        style = androidx.compose.ui.graphics.drawscope.Stroke(
+                            width = 3.5.dp.toPx(),
+                            cap = androidx.compose.ui.graphics.StrokeCap.Round
+                        )
+                    )
+                }
             }
+            Spacer(Modifier.height(10.dp))
+            Text("جارٍ تجهيز تجربتك الموسيقية…", color = Color(0xFF9D8BAE), fontSize = 10.sp)
         }
         Text(
-            "OFFLINE MUSIC EXPERIENCE",
-            Modifier.align(Alignment.BottomCenter).padding(bottom = 28.dp),
-            color = Color(0xFF766A83), fontSize = 9.sp, letterSpacing = 2.2.sp
+            "MADE IN LIBYA  •  🇱🇾",
+            Modifier.align(Alignment.BottomCenter).padding(bottom = 27.dp),
+            color = Color(0xFF81738F),
+            fontSize = 9.sp,
+            letterSpacing = 2.sp,
+            fontFamily = iPhoneEmojiFont
         )
     }
 }
- 
+
 @Composable
 private fun MadiLoginScreen(
     onGoogleLogin: () -> Unit,

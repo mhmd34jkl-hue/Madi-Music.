@@ -303,19 +303,33 @@ private fun MadiMusic(
     val current = tracks[selectedIndex]
 
     DisposableEffect(player) {
-        val listener = object : Player.Listener {
-            override fun onMediaItemTransition(mediaItem: androidx.media3.common.MediaItem?, reason: Int) {
-                val newIndex = tracks.indexOfFirst { it.id == mediaItem?.mediaId }
-                if (newIndex >= 0) selectedIndex = newIndex
+        val activePlayer = player
+        if (activePlayer == null) {
+            playing = false
+            onDispose { }
+        } else {
+            val listener = object : Player.Listener {
+                override fun onMediaItemTransition(mediaItem: androidx.media3.common.MediaItem?, reason: Int) {
+                    val newIndex = tracks.indexOfFirst { it.id == mediaItem?.mediaId }
+                    if (newIndex >= 0) selectedIndex = newIndex
+                }
+                override fun onIsPlayingChanged(isPlaying: Boolean) {
+                    playing = isPlaying
+                }
             }
-            override fun onIsPlayingChanged(isPlaying: Boolean) { playing = isPlaying }
+            // Synchronize the UI with an already-running playback session before listening.
+            playing = activePlayer.isPlaying
+            activePlayer.currentMediaItem?.mediaId?.let { mediaId ->
+                val currentIndex = tracks.indexOfFirst { it.id == mediaId }
+                if (currentIndex >= 0) selectedIndex = currentIndex
+            }
+            activePlayer.addListener(listener)
+            if (activePlayer.mediaItemCount == 0) {
+                activePlayer.setMediaItems(MusicCatalog.mediaItems(), 0, 0L)
+                activePlayer.prepare()
+            }
+            onDispose { activePlayer.removeListener(listener) }
         }
-        if (player != null && player.mediaItemCount == 0) {
-            player.setMediaItems(MusicCatalog.mediaItems(), 0, 0L)
-            player.prepare()
-        }
-        player?.addListener(listener)
-        onDispose { player?.removeListener(listener) }
     }
 
     fun play(index: Int) {

@@ -564,7 +564,6 @@ private fun MadiLoginScreen(
     }
 }
 
-@Composable
 private data class ArtistAlbum(
     val artist: String,
     val portraitResourceName: String,

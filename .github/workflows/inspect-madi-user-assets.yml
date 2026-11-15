@@ -12,17 +12,30 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Inventory uploaded ZIP images and create contact sheet
+      - name: Inventory ZIP images, fetch artist portraits and subset iPhone emoji font
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
         shell: bash
         run: |
           set -euo pipefail
           test -s "New Folder.zip"
           sudo apt-get update
           sudo apt-get install -y python3-pil
-          mkdir -p inspected-assets
+          python3 -m pip install --user fonttools
+          mkdir -p inspected-assets artist-downloads
+          gh release download emoji-v1 --repo "$GH_REPO" --dir artist-downloads --pattern '*.ttf'
+          test -s artist-downloads/iOS17.4.ANSHULDIXIT.ttf
+          curl -fL --retry 3 "https://is1-ssl.mzstatic.com/image/thumb/AMCArtistImages126/v4/cb/b3/39/cbb339f7-ed32-cfc5-20c6-610dcf4d3ccb/499f803a-e680-436b-b6b4-c97726363f6f_ami-identity-4dbac9010ef18890bafd2dc7e2f8ca8e-2023-03-20T09-39-14.518Z_cropped.png/400x400bb.jpg" -o artist-downloads/cheb-akil.jpg
+          curl -fL --retry 3 "https://i.iheart.com/v3/catalog/artist/37222363?ops=fit%28480%2C480%29%2Crun%28%22circle%22%29" -o artist-downloads/cheb-momo.jpg
+          curl -fL --retry 3 "https://24hip-hop.com/wp-content/uploads/2022/09/WhatsApp-Image-2022-09-29-at-9.46.17-AM-e1664543537463.jpeg" -o artist-downloads/aljundi.jpg
+          curl -fL --retry 3 "https://i.scdn.co/image/ab6761610000e5eb05f5e7a2f8bfc757be0eeb74" -o artist-downloads/rafea.jpg
+          curl -fL --retry 3 "https://i.ytimg.com/vi/v8TBDTnMsjY/maxresdefault.jpg" -o artist-downloads/colomby.jpg
           python3 - <<'PY'
-          import zipfile, pathlib, io
+          import zipfile, pathlib, io, unicodedata, subprocess
           from PIL import Image, ImageOps, ImageDraw
+          from fontTools.ttLib import TTFont
+          out=pathlib.Path("inspected-assets")
           z=zipfile.ZipFile("New Folder.zip")
           rows=[]
           for info in z.infolist():
@@ -30,16 +43,15 @@ jobs:
               p=pathlib.PurePosixPath(info.filename)
               if p.suffix.lower() not in (".png",".jpg",".jpeg",".webp"): continue
               try:
-                  im=Image.open(io.BytesIO(z.read(info))).convert("RGB")
-                  im.thumbnail((220,170))
-                  rows.append((info.filename,im.copy(),info.file_size))
-                  out=pathlib.Path("inspected-assets")/(f"{len(rows):02d}_"+p.name.replace("/","_"))
-                  out.write_bytes(z.read(info))
-              except Exception:
-                  pass
+                  raw=z.read(info); im=Image.open(io.BytesIO(raw)).convert("RGB")
+                  thumb=im.copy(); thumb.thumbnail((220,170))
+                  rows.append((info.filename,thumb,info.file_size))
+                  (out/(f"{len(rows):02d}_"+p.name.replace("/","_"))).write_bytes(raw)
+                  if p.name.casefold()=="login screen.png":
+                      im.save(out/"login-screen-reference.png",quality=95)
+              except Exception: pass
           if not rows: raise SystemExit("No readable images found in New Folder.zip")
-          w,h=260,220
-          cols=3
+          w,h,cols=260,220,3
           sheet=Image.new("RGB",(cols*w,((len(rows)+cols-1)//cols)*h),(20,16,28))
           draw=ImageDraw.Draw(sheet)
           for i,(name,im,size) in enumerate(rows):
@@ -48,11 +60,47 @@ jobs:
               label=name if len(name)<36 else name[:33]+"..."
               draw.text((x+8,y+180),label,fill=(245,235,255))
               draw.text((x+8,y+198),f"{im.width}x{im.height} | {size} bytes",fill=(180,165,195))
-          sheet.save("inspected-assets/contact-sheet.jpg",quality=90)
-          with open("inspected-assets/inventory.txt","w") as f:
+          sheet.save(out/"contact-sheet.jpg",quality=90)
+          with open(out/"inventory.txt","w") as f:
               for name,im,size in rows: f.write(f"{name}\t{im.width}x{im.height}\t{size}\n")
-          print("READABLE_IMAGES",len(rows))
-          for name,im,size in rows: print("IMAGE",name,im.size,size)
+          print("READABLE_ZIP_IMAGES",len(rows))
+          # Artist portrait sources, separately named and cropped to square.
+          specs={
+            "artist_cheb_akil.png":("artist-downloads/cheb-akil.jpg",None),
+            "artist_cheb_momo.png":("artist-downloads/cheb-momo.jpg","circle"),
+            "artist_aljundi.png":("artist-downloads/aljundi.jpg",(0,0,524,524)),
+            "artist_rafea_alakoky.png":("artist-downloads/rafea.jpg",None),
+            "artist_colomby.png":("artist-downloads/colomby.jpg",(0,0,720,720)),
+          }
+          for name,(src,crop) in specs.items():
+              im=Image.open(src).convert("RGBA")
+              if crop=="circle":
+                  im=ImageOps.fit(im,(512,512),centering=(0.5,0.5))
+                  mask=Image.new("L",(512,512),0); ImageDraw.Draw(mask).ellipse((0,0,511,511),fill=255); im.putalpha(mask)
+              elif isinstance(crop,tuple):
+                  im=im.crop(crop)
+                  im=ImageOps.fit(im,(512,512),centering=(0.5,0.5))
+              else:
+                  im=ImageOps.fit(im,(512,512),centering=(0.5,0.5))
+              im.save(out/name,optimize=True)
+              print("ARTIST_PORTRAIT",name,im.size)
+          font_path=pathlib.Path("artist-downloads/iOS17.4.ANSHULDIXIT.ttf")
+          font=TTFont(str(font_path))
+          cmap=set()
+          for table in font['cmap'].tables: cmap.update(table.cmap.keys())
+          ranges=[(0x1F000,0x1FAFF),(0x2600,0x27BF),(0x2300,0x23FF),(0x2B00,0x2BFF),(0x2194,0x21AA),(0x2934,0x2935),(0x3030,0x303D),(0x3297,0x3299),(0x1F1E6,0x1F1FF),(0x1F3FB,0x1F3FF),(0xE0020,0xE007F)]
+          selected={cp for cp in cmap if any(a<=cp<=b for a,b in ranges)}
+          selected.update(cp for cp in (0x200D,0xFE0E,0xFE0F,0x20E3) if cp in cmap)
+          if not selected: raise SystemExit("Emoji font had no expected emoji Unicode coverage")
+          unicode_arg=",".join(f"U+{cp:04X}" for cp in sorted(selected))
+          subprocess.run(["/home/runner/.local/bin/pyftsubset",str(font_path),"--output-file",str(out/"ios_emoji_subset.ttf"),"--unicodes="+unicode_arg,"--layout-features=*","--glyph-names","--symbol-cmap","--legacy-cmap","--notdef-glyph","--notdef-outline","--recommended-glyphs","--name-IDs=*","--name-languages=*"],check=True)
+          subset=out/"ios_emoji_subset.ttf"
+          subfont=TTFont(str(subset))
+          with open(out/"emoji-font-report.txt","w") as f:
+              f.write(f"Original bytes: {font_path.stat().st_size}\nSubset bytes: {subset.stat().st_size}\nUnicode codepoints retained: {len(selected)}\nOriginal tables: {sorted(font.keys())}\nSubset tables: {sorted(subfont.keys())}\n")
+          print("EMOJI_FONT_ORIGINAL_BYTES",font_path.stat().st_size)
+          print("EMOJI_FONT_SUBSET_BYTES",subset.stat().st_size)
+          print("EMOJI_CODEPOINTS",len(selected))
           PY
       - uses: actions/upload-artifact@v4
         with:

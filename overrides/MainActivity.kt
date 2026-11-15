@@ -665,7 +665,7 @@ private fun HomePage(
                 horizontalArrangement = Arrangement.spacedBy(11.dp),
                 contentPadding = PaddingValues(end = 2.dp)
             ) {
-                items(albums.size) { index ->
+                items(albums.size, key = { index -> albums[index].artist }) { index ->
                     ArtistAlbumCard(albums[index], artistFilter == albums[index].artist, {
                         onArtist(albums[index].artist)
                     })

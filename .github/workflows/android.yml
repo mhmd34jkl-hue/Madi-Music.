@@ -383,6 +383,27 @@ jobs:
           grep -q "R.font.iphone" overrides/MainActivity.kt
           echo "Installed user-uploaded iPhone.ttf and verified the fixed Compose font reference"
 
+      - name: Install compact iPhone emoji font and verified artist portraits
+        shell: bash
+        run: |
+          set -euo pipefail
+          FONT_DIR="$PROJECT_DIR/app/src/main/res/font"
+          DRAWABLE_DIR="$PROJECT_DIR/app/src/main/res/drawable-nodpi"
+          test -s "artist-assets/ios_emoji_subset.ttf" || { echo 'Optimized iPhone emoji font is missing'; exit 1; }
+          mkdir -p "$FONT_DIR" "$DRAWABLE_DIR"
+          cp "artist-assets/ios_emoji_subset.ttf" "$FONT_DIR/ios_emoji.ttf"
+          for portrait in artist-assets/artist_*.png; do
+            test -s "$portrait"
+            cp "$portrait" "$DRAWABLE_DIR/"
+          done
+          test -s "$FONT_DIR/ios_emoji.ttf"
+          for name in artist_cheb_akil artist_cheb_momo artist_aljundi artist_rafea_alakoky artist_colomby; do
+            test -s "$DRAWABLE_DIR/$name.png"
+          done
+          grep -q "R.font.ios_emoji" overrides/MainActivity.kt
+          echo "Installed compact iPhone emoji font and all five artist portraits"
+          du -h "$FONT_DIR/ios_emoji.ttf" "$DRAWABLE_DIR"/artist_*.png
+
       - name: Build debug APK
         run: gradle -p "$PROJECT_DIR" assembleDebug
 

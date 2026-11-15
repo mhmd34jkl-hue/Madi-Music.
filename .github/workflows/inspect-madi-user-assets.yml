@@ -5,7 +5,7 @@ on:
     branches: [feature/madi-ui-polish-no-build]
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   inspect-assets:
@@ -68,7 +68,7 @@ jobs:
           specs={
             "artist_cheb_akil.png":("artist-downloads/cheb-akil.jpg",None),
             "artist_cheb_momo.png":("artist-downloads/cheb-momo.jpg","circle"),
-            "artist_aljundi.png":("artist-downloads/aljundi.jpg",(0,0,524,524)),
+            "artist_aljundi.png":("artist-downloads/aljundi.jpg",(120,0,644,524)),
             "artist_rafea_alakoky.png":("artist-downloads/rafea.jpg",None),
             "artist_colomby.png":("artist-downloads/colomby.jpg",(0,0,720,720)),
           }
@@ -88,9 +88,20 @@ jobs:
           font=TTFont(str(font_path))
           cmap=set()
           for table in font['cmap'].tables: cmap.update(table.cmap.keys())
-          ranges=[(0x1F000,0x1FAFF),(0x2600,0x27BF),(0x2300,0x23FF),(0x2B00,0x2BFF),(0x2194,0x21AA),(0x2934,0x2935),(0x3030,0x303D),(0x3297,0x3299),(0x1F1E6,0x1F1FF),(0x1F3FB,0x1F3FF),(0xE0020,0xE007F)]
-          selected={cp for cp in cmap if any(a<=cp<=b for a,b in ranges)}
-          selected.update(cp for cp in (0x200D,0xFE0E,0xFE0F,0x20E3) if cp in cmap)
+          wanted={
+            0x1F50D,0x1F50E,0x1F3A7,0x1F3B5,0x1F3B6,0x1F451,0x2764,0x2728,
+            0x1F1F1,0x1F1FE,0x1F512,0x1F50A,0x1F3A4,0x1F389,0x1F44D,0x1F60D,
+            0x1F525,0x1F680,0x1F4F1,0x1F3BC,0x1F3A9,0x1F4BF,0x1F4F7,0x1F4AC,
+            0x1F4A1,0x1F4A5,0x1F48B,0x1F49C,0x1F3C6,0x1F3B9,0x1F3B8,0x1F3B7,
+            0x1F4F9,0x1F4FA,0x1F3AE,0x1F3AF,0x1F4E2,0x1F4E3,0x1F4E4,0x1F4E5,
+            0x1F4F2,0x1F4F3,0x1F4F4,0x1F4F5,0x1F4F6,0x1F4F8,0x1F4FB,0x1F4FC,
+            0x1F3B2,0x1F3B0,0x1F3B1,0x1F3B3,0x1F3B4,0x1F3BA,0x1F3BB,0x1F3BD,
+            0x1F3BE,0x1F3BF,0x1F44F,0x1F44E,0x1F64F,0x1F64C,0x1F4A9,0x1F62D,
+            0x1F61C,0x1F914,0x1F973,0x1F970,0x1F97A,0x1F92D,0x1F621,0x1F60A,
+            0x1F60E,0x1F923,0x1F62E,0x1F910,0x1F4A8,0x1F4A7,0x1F31F,0x1F3FB,
+            0x1F3FC,0x1F3FD,0x1F3FE,0x1F3FF,0x200D,0xFE0E,0xFE0F,0x20E3
+          }
+          selected=wanted & cmap
           if not selected: raise SystemExit("Emoji font had no expected emoji Unicode coverage")
           unicode_arg=",".join(f"U+{cp:04X}" for cp in sorted(selected))
           subprocess.run(["/home/runner/.local/bin/pyftsubset",str(font_path),"--output-file="+str(out/"ios_emoji_subset.ttf"),"--unicodes="+unicode_arg,"--layout-features=*","--glyph-names","--symbol-cmap","--legacy-cmap","--notdef-glyph","--notdef-outline","--recommended-glyphs","--name-IDs=*","--name-languages=*"],check=True)
@@ -107,3 +118,29 @@ jobs:
           name: madi-user-assets-inspection
           path: inspected-assets/
           if-no-files-found: error
+      - name: Commit optimized font and artist portraits to the no-build branch
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p artist-assets
+          cp inspected-assets/artist_*.png artist-assets/
+          cp inspected-assets/ios_emoji_subset.ttf artist-assets/
+          cp inspected-assets/emoji-font-report.txt artist-assets/
+          cat > artist-assets/SOURCES.md <<'EOF'
+          Artist portrait source notes:
+          - Cheb Akil: Shazam artist profile portrait.
+          - Cheb Momo: iHeart artist portrait.
+          - Aljundi: 24Hip-Hop artist feature portrait.
+          - Rafea Alakoky: Spotify artist profile portrait.
+          - Colomby: official Colomby YouTube video thumbnail, cropped to the artist.
+          Emoji font: user's iOS17.4.ANSHULDIXIT.ttf from the emoji-v1 release; subsetted to the common emoji glyphs used by the app to avoid adding the full 47 MB font.
+          EOF
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add artist-assets/
+          if ! git diff --cached --quiet; then
+            git commit -m "Add artist portraits and compact iPhone emoji font [asset-bot]"
+            git push origin HEAD:feature/madi-ui-polish-no-build
+          fi

@@ -314,7 +314,12 @@ private fun MadiMusic(
         val safeIndex = index.coerceIn(0, tracks.lastIndex)
         selectedIndex = safeIndex
         if (player != null) {
-            player.seekToDefaultPosition(safeIndex)
+            if (player.mediaItemCount == 0) {
+                player.setMediaItems(MusicCatalog.mediaItems(), safeIndex, 0L)
+                player.prepare()
+            } else {
+                player.seekToDefaultPosition(safeIndex)
+            }
             player.play()
         }
         playing = player != null

@@ -493,7 +493,11 @@ private fun MadiIntroScreen() {
             Spacer(Modifier.height(20.dp))
             Text("تجربة موسيقية راقية، أينما كنت", color = Color(0xFFBFB1CD), fontSize = 12.sp)
             Spacer(Modifier.height(8.dp))
-            Text("MADE IN LIBYA  •  🇱🇾", color = Color(0xFF8E829C), fontSize = 10.sp, letterSpacing = 2.sp)
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text("MADE IN LIBYA  •", color = Color(0xFF8E829C), fontSize = 10.sp, letterSpacing = 2.sp)
+                Spacer(Modifier.width(4.dp))
+                Text("🇱🇾", color = Color(0xFF8E829C), fontSize = 12.sp, fontFamily = iPhoneEmojiFont)
+            }
         }
         Text(
             "OFFLINE MUSIC EXPERIENCE",
@@ -811,7 +815,10 @@ private fun NowPlayingPage(track: Track, playing: Boolean, onBack: () -> Unit, o
         }
         Spacer(Modifier.height(16.dp))
         OutlinedButton(onClick = onEqualizer, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(16.dp), colors = ButtonDefaults.outlinedButtonColors(contentColor = Color(0xFFE5CCFF))) {
-            Text("🎚️  معادل الصوت", fontWeight = FontWeight.Bold)
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(7.dp)) {
+                Text("🎚️", fontSize = 17.sp, fontFamily = iPhoneEmojiFont)
+                Text("معادل الصوت", fontWeight = FontWeight.Bold)
+            }
         }
         Spacer(Modifier.height(8.dp))
         Text("استمتع بموسيقاك في أي مكان", color = Muted, fontSize = 12.sp)
@@ -951,7 +958,7 @@ private fun SearchField(value: String, onValue: (String) -> Unit, onSearch: () -
         onValueChange = onValue,
         modifier = Modifier.fillMaxWidth(),
         placeholder = { Text("ابحث عن أغنية أو فنان…", color = Muted) },
-        leadingIcon = { Text("🔍", color = Color(0xFFDCC2F4), fontSize = 22.sp) },
+        leadingIcon = { Text("🔍", color = Color(0xFFDCC2F4), fontSize = 22.sp, fontFamily = iPhoneEmojiFont) },
         singleLine = true,
         keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
         keyboardActions = KeyboardActions(onSearch = { onSearch() }),

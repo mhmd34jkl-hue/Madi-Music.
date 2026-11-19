@@ -869,6 +869,7 @@ private fun HomePage(
         indexedTitles.filter { pair ->
             val track = tracks[pair.first]
             (artistFilter == "الكل" || track.artist == artistFilter ||
+                (artistFilter == "كولومبي" && track.artist == "كولمبي") ||
                 (artistFilter == "رافع العكعوكي" && track.artist.contains("رافع"))) &&
                 (query.isBlank() || track.title.contains(query, true) || track.artist.contains(query, true))
         }

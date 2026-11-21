@@ -18,7 +18,6 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.ui.draw.clip
-import androidx.compose.animation.Crossfade
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.rememberInfiniteTransition
@@ -26,7 +25,6 @@ import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.FastOutSlowInEasing
-import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -390,8 +388,9 @@ private fun MadiMusic(
             }
 
             Box(Modifier.weight(1f).fillMaxWidth()) {
-                Crossfade(targetState = page, animationSpec = tween(durationMillis = 120, easing = FastOutSlowInEasing), label = "madi-page-transition") { targetPage ->
-                when (targetPage) {
+                // Render only the active page. Crossfade kept both full page trees alive
+                // during navigation and caused avoidable frame drops on mid-range devices.
+                when (page) {
                     0 -> HomePage(
                         query, { query = it }, artistFilter, { artistFilter = it },
                         indexedTrackTitles,
@@ -400,7 +399,7 @@ private fun MadiMusic(
                         onSearch = { page = 1 },
                         onSeeAllAlbums = { page = 6 }
                     )
-                    1 -> SearchPage(query, { query = it }, tracks, selectedIndex, favorites, { id -> if (favorites.contains(id)) favorites.remove(id) else favorites.add(id) }, ::play) 
+                    1 -> SearchPage(query, { query = it }, tracks, selectedIndex, favorites, { id -> if (favorites.contains(id)) favorites.remove(it) else favorites.add(it) }, ::play)
                     2 -> TrackListPage("مكتبتي", "كل أغانيك في مكان واحد", tracks.indices.toList(), tracks, selectedIndex, favorites, { id -> if (favorites.contains(id)) favorites.remove(id) else favorites.add(id) }, ::play)
                     3 -> TrackListPage("الأغاني المفضلة", "الأغاني التي حفظتها بقلبك", tracks.indices.filter { favorites.contains(tracks[it].id) }, tracks, selectedIndex, favorites, { id -> if (favorites.contains(id)) favorites.remove(id) else favorites.add(id) }, ::play)
                     5 -> NowPlayingPage(current, playing, { page = 0 }, { if (playing) { player?.pause(); playing = false } else { if (player?.currentMediaItem == null) play(selectedIndex) else { player?.play(); playing = true } } }, ::play, selectedIndex, tracks.lastIndex, { showEqualizer = true })
@@ -409,7 +408,6 @@ private fun MadiMusic(
                         signedInName, onGoogleLogin, onFacebookLogin, onSignOut,
                         onEmailLogin, onCreateAccount, onPasswordReset
                     )
-                }
                 }
             }
 
@@ -1459,7 +1457,6 @@ private fun SettingsSection(
                 RoundedCornerShape(23.dp)
             )
             .then(Modifier.border(1.dp, Color(0xFF4B2D68), RoundedCornerShape(23.dp)))
-            .animateContentSize()
             .padding(16.dp)
     ) {
         Text(title, color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.ExtraBold)
